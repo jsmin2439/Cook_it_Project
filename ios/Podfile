@@ -1,0 +1,10 @@
+platform :ios, '15.0'
+
+target 'Runner' do
+  use_frameworks!
+  pod 'MediaPipeTasksVision', '0.10.14'
+end
+
+target 'RunnerTests' do
+  inherit! :search_paths
+end

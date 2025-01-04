@@ -4,6 +4,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:validators/validators.dart';
 
+import '../main.dart';
+import 'main_screen.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -152,12 +155,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (form == null || !form.validate()){
                         return ;
                       }
+                      // context.read<AuthProvider>().signUp(
+                      //   email: _emailEditingController.text,
+                      //   name: _nameEditingController.text,
+                      //   password: _passwordEditingController.text,
+                      // );
 
-                      context.read<AuthProvider>().signUp(
-                        email: _emailEditingController.text,
-                        name: _nameEditingController.text,
-                        password: _passwordEditingController.text,
-                      );
                     },
                     child: Text('회원가입'),
                   style: ElevatedButton.styleFrom(
@@ -168,7 +171,14 @@ class _SignupScreenState extends State<SignupScreen> {
                 SizedBox(height: 10),
 
                 TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const MainScreen(),
+                        ),
+                      );
+                    },
                     child: Text(
                       '이미 회원이신가요? 로그인 하기',
                       style: TextStyle(fontSize: 20),
@@ -181,8 +191,4 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-}
-
-extension on AuthProvider {
-  void signUp({required String email, required String name, required String password}) {}
 }

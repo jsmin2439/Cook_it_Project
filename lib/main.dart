@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:son_1/firebase_options.dart';
 import 'package:son_1/providers/auth_state.dart';
 import 'package:son_1/repositories/auth_repository.dart';
+import 'package:son_1/screens/signin_screen.dart';
 import 'package:son_1/screens/signup_screen.dart';
 
 void main() async {
@@ -31,22 +32,12 @@ class MyApp extends StatelessWidget {
               firebaseFirestore: FirebaseFirestore.instance,
           ),
       ),
-
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      home: MainScreen(),
+      home: SigninScreen(),
     ),
   );
-  }
-}
-
-class MainScreen extends StatelessWidget{
-  const MainScreen({super.key});
-
-  @override
-  Widget build(BuildContext context){
-    return SignupScreen();
   }
 }

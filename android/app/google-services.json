@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "127492168118",
+    "project_id": "fireman-dfd8c",
+    "storage_bucket": "fireman-dfd8c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:127492168118:android:bdc3bca950d53b0133c917",
+        "android_client_info": {
+          "package_name": "com.example.son_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVyCtSyL7fbFN10fdGILjjP-lqYhuEIxg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

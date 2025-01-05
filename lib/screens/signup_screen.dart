@@ -36,7 +36,7 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 // 로고
                 SvgPicture.asset(
-                  'assets/images/ic_instagram.svg',
+                  'assets/images/ic_cookit.svg',
                   height: 64,
                   colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
                 ),
@@ -46,18 +46,18 @@ class _SignupScreenState extends State<SignupScreen> {
                   alignment: Alignment.center,
                   child: Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 64,
-                        backgroundImage: AssetImage('assets/images/profile.png'),
-                      ),
-                      Positioned(
-                        left: 80,
-                        bottom: -10,
-                        child: IconButton(
-                          onPressed: () {},
-                          icon: Icon(Icons.add_a_photo),
-                        ),
-                      ),
+                      Image.asset(
+                      'assets/images/cookit.png',
+                    width: 150,
+                      height: 150,
+                  ),
+                      // Positioned(
+                      //   left: 80,
+                      //   bottom: -10,
+                      //   child: IconButton(
+                      //     onPressed: () {},
+                      //     icon: Icon(Icons.add_a_photo),
+                      //   ),
                     ],
                   ),
                 ),
@@ -180,7 +180,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       );
                     },
                     child: Text(
-                      '이미 회원이신가요? 로그인 하기',
+                      '비회원 로그인 하기',
                       style: TextStyle(fontSize: 20),
                     ),
                 )

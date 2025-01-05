@@ -44,7 +44,7 @@ class _SigninScreenState extends State<SigninScreen> {
                   children: [
                     // 로고
                     SvgPicture.asset(
-                      'assets/images/ic_instagram.svg',
+                      'assets/images/ic_cookit.svg',
                       height: 64,
                       colorFilter:
                       ColorFilter.mode(Colors.white, BlendMode.srcIn),

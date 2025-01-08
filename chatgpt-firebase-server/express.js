@@ -111,7 +111,7 @@ app.post("/recommend", async (req, res) => {
       }).join("\n");
 
       const gptResponse = await openaiClient.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4",
         messages: [
           {
             role: "user",

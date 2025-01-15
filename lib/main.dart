@@ -10,6 +10,7 @@ import 'package:son_1/providers/auth_state.dart';
 import 'package:son_1/repositories/auth_repository.dart';
 import 'package:son_1/screens/signin_screen.dart';
 import 'package:son_1/screens/signup_screen.dart';
+import 'package:son_1/providers/auth_provider.dart' as myAuthProvider;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,10 +33,13 @@ class MyApp extends StatelessWidget {
               firebaseFirestore: FirebaseFirestore.instance,
           ),
       ),
+      StateNotifierProvider<myAuthProvider.AuthProvider, AuthState>(
+        create: (context) => myAuthProvider.AuthProvider(),
+      )
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark(),
+      theme: ThemeData.light(),
       home: SigninScreen(),
     ),
   );

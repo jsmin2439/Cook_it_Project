@@ -47,7 +47,7 @@ class _SigninScreenState extends State<SigninScreen> {
                       'assets/images/ic_cookit.svg',
                       height: 64,
                       colorFilter:
-                      ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                      ColorFilter.mode(Colors.black, BlendMode.srcIn),
                     ),
                     SizedBox(height: 20),
 

@@ -9,8 +9,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Cook it',
       theme: ThemeData(
-        brightness: Brightness.dark,
+        brightness: Brightness.light,
         primaryColor: Colors.red,
+        scaffoldBackgroundColor: Colors.white,
       ),
       home: MainScreen(),
     );
@@ -74,56 +75,59 @@ class _MainScreenState extends State<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.red,
-        title: Row(
-          children: [
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.menu),
-              onSelected: _onMenuSelected,
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'Profile', child: Text('Profile')),
-                PopupMenuItem(value: 'Settings', child: Text('Settings')),
-                PopupMenuItem(value: 'Logout', child: Text('Logout')),
-              ],
+    return WillPopScope(
+      onWillPop: () async {
+        // false를 반환하여 뒤로가기 동작을 차단합니다.
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Color(0xFFFF9800),
+          title: Row(
+            children: [
+              const SizedBox(width: 8),
+              const Text(
+                'Cook it',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, // 텍스트를 굵게 설정
+                  fontSize: 20.0,             // 텍스트 크기 조정 (옵션)
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: _openSettings,
+              tooltip: 'Settings',
             ),
-            const SizedBox(width: 8),
-            const Text('Cook it'),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _openSettings,
-            tooltip: 'Settings',
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: tabController,
-        physics: const NeverScrollableScrollPhysics(),
-        children: const [
-          Center(child: Text('Home')),
-          Center(child: Text('Category')),
-          Center(child: Text('Camera')),
-          Center(child: Text('Favorite')),
-          FeedUploadScreen(),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: tabController.index,
-        onTap: bottomNavigationItemOnTab,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Category'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Receipt'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorite'),
-          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
-        ],
+        body: TabBarView(
+          controller: tabController,
+          physics: const NeverScrollableScrollPhysics(),
+          children: const [
+            Center(child: Text('Home')),
+            Center(child: Text('Category')),
+            Center(child: Text('Camera')),
+            Center(child: Text('Favorite')),
+            FeedUploadScreen(),
+          ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: tabController.index,
+          onTap: bottomNavigationItemOnTab,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Category'),
+            BottomNavigationBarItem(icon: Icon(Icons.add_circle), label: 'Receipt'),
+            BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favorite'),
+            BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Community'),
+          ],
+        ),
       ),
     );
   }

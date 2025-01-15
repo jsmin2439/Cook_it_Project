@@ -44,7 +44,10 @@ dependencies:
   state_notifier: ^1.0.0
   flutter_state_notifier: ^1.0.0
 
+
 dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
+
   flutter_test:
     sdk: flutter
 
@@ -54,6 +57,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+#
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/play_store_512.png"
+  adaptive_icon_background: "assets/icon/ic_launcher_background.png"
+  adaptive_icon_foreground: "assets/icon/ic_launcher_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -16,6 +16,15 @@ class AuthRepository{
     required this.firebaseFirestore,
   });
 
+  Future<void> signIn({
+    required String email,
+    required String password,
+}) async {
+    UserCredential userCredential = await firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password);
+  }
+
   Future<void> signUp({
     required String email,
     required String name,
@@ -26,6 +35,20 @@ class AuthRepository{
         password: password,
     );
 
-    print(userCredential.user);
+    String uid = userCredential.user!.uid;
+
+    await firebaseFirestore.collection('users').doc(uid).set(
+      {
+        'uid':uid ,
+        'email':email,
+        'name': name,
+        'feedCount':0,
+        'likes':[],
+        'followers':[],
+        'following':[],
+      }
+    );
+
+    firebaseAuth.signOut();
   }
 }

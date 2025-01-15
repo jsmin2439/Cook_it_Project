@@ -12,11 +12,17 @@ class AuthProvider extends StateNotifier<AuthState> with LocatorMixin {
     required String name,
     required String password,
   }) async {
-
     await read<AuthRepository>().signUp(
         email: email,
         name: name,
         password: password
     );
+  }
+
+  void SignIn({
+    required String email,
+    required String password,
+}) {
+
   }
 }

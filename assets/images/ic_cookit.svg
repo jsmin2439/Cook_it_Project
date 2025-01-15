@@ -1,6 +1,6 @@
 <svg width="168" height="80" viewBox="0 0 168 80" fill="none" xmlns="http://www.w3.org/2000/svg">
     <text x="50%" y="50%" text-anchor="middle" font-family="Arial, sans-serif"
-        font-size="50" font-weight="bold" fill="#343433" dominant-baseline="middle">
+        font-size="50" font-weight="bold" fill="#000000" style="fill: #000000;" dominant-baseline="middle">
         Cook it!
     </text>
 </svg>

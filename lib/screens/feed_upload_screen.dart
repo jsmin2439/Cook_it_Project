@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 
-class FeedUploadScreen extends StatefulWidget {
+class FeedUploadScreen extends StatelessWidget {
   const FeedUploadScreen({super.key});
 
-  @override
-  State<FeedUploadScreen> createState() => _FeedUploadScreenState();
-}
-
-class _FeedUploadScreenState extends State<FeedUploadScreen> {
-  final List<String> _files = [];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,29 +10,91 @@ class _FeedUploadScreenState extends State<FeedUploadScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        actions: [
-          TextButton(
-              onPressed: () {},
-              child: Text('Feed'),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 프로필 섹션
+              Row(
+                children: [
+                  // 프로필 이미지
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        '까미',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 5),
+                      Text(
+                        'luckybicky',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // 관리 버튼
+                  ElevatedButton(
+                    onPressed: () {
+                      // 버튼 액션 추가
+                    },
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      side: const BorderSide(color: Colors.black),
+                    ),
+                    child: const Text('관리'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // 메뉴 섹션
+              const Divider(),
+              _buildMenuItem(Icons.notifications, '알림 설정'),
+              const Divider(),
+              _buildMenuItem(Icons.headset, '문의 하기'),
+              const Divider(),
+              _buildMenuItem(Icons.info, '개발자 정보'),
+              const Divider(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 30,
+            color: Colors.black,
+          ),
+          const SizedBox(width: 20),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
-      body: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 15,
-          horizontal: 15,
-        ),
-        alignment: Alignment.topCenter,
-        child: Container(
-            height: 80,
-            width: 80,
-            child: const Icon(Icons.upload),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(5),
-            ),
-          ),
-        ),
     );
   }
 }

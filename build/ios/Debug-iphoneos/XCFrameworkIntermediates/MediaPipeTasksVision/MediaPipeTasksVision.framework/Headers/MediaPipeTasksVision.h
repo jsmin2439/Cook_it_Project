@@ -22,6 +22,9 @@
 #import <MediaPipeTasksVision/MPPHandLandmarker.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerOptions.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerResult.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarker.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerOptions.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerResult.h>
 #import <MediaPipeTasksVision/MPPImage.h>
 #import <MediaPipeTasksVision/MPPImageClassifier.h>
 #import <MediaPipeTasksVision/MPPImageClassifierOptions.h>
@@ -71,6 +74,9 @@
 #import <MediaPipeTasksVision/MPPHandLandmarker.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerOptions.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerResult.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarker.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerOptions.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerResult.h>
 #import <MediaPipeTasksVision/MPPImage.h>
 #import <MediaPipeTasksVision/MPPImageClassifier.h>
 #import <MediaPipeTasksVision/MPPImageClassifierOptions.h>
@@ -120,6 +126,9 @@
 #import <MediaPipeTasksVision/MPPHandLandmarker.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerOptions.h>
 #import <MediaPipeTasksVision/MPPHandLandmarkerResult.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarker.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerOptions.h>
+#import <MediaPipeTasksVision/MPPHolisticLandmarkerResult.h>
 #import <MediaPipeTasksVision/MPPImage.h>
 #import <MediaPipeTasksVision/MPPImageClassifier.h>
 #import <MediaPipeTasksVision/MPPImageClassifierOptions.h>

@@ -32,7 +32,7 @@ class AppDelegate: FlutterAppDelegate {
   private func attachCameraView(to flutterViewController: FlutterViewController) {
       // 전체 화면에서 카메라 뷰는 하단 50%를 차지하도록 설정
       let screenBounds = UIScreen.main.bounds
-      let cameraHeight = screenBounds.height * 0.5  // 50% 높이
+      let cameraHeight = screenBounds.height * 0  // 50% 높이
       let cameraFrame = CGRect(
         x: 0,
         y: screenBounds.height - cameraHeight,

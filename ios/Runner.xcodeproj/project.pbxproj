@@ -14,6 +14,7 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		9CA55A3A2D9D6C52331572FD /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65F6FED2585CAC78D753EC48 /* Pods_Runner.framework */; };
 		B322F8FB1DE16D5B53B9A9A9 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A65BB3955951FD48B56AF72 /* Pods_RunnerTests.framework */; };
+		C18606363E84853DDBE07D41 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 40BBE3CCBD2D19CC75B3D263 /* GoogleService-Info.plist */; };
 		E127DB1B2D3A31AE0084A903 /* Podfile.lock in Resources */ = {isa = PBXBuildFile; fileRef = E127DB1A2D3A31AE0084A903 /* Podfile.lock */; };
 		E127DB1C2D3A31AE0084A903 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = E127DB192D3A31AE0084A903 /* Podfile */; };
 		E127DB2D2D48E0100084A903 /* CameraFeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E127DB2B2D48E0100084A903 /* CameraFeedService.swift */; };
@@ -27,6 +28,7 @@
 		E127DB3E2D48FA410084A903 /* HandOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = E127DB362D48FA410084A903 /* HandOverlay.swift */; };
 		E127DB402D48FACB0084A903 /* HandLandmarkerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E127DB3F2D48FACB0084A903 /* HandLandmarkerService.swift */; };
 		E127DB422D48FB480084A903 /* BottomSheetViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E127DB412D48FB480084A903 /* BottomSheetViewController.swift */; };
+		E17EBD512D53BE4C0088572A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E17EBD502D53BE4C0088572A /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +63,7 @@
 		350ECC9FB9C609F27F9208BC /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		39C9411B924336472A7DCF50 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		40BBE3CCBD2D19CC75B3D263 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		65F6FED2585CAC78D753EC48 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -85,6 +88,7 @@
 		E127DB392D48FA410084A903 /* RootViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewController.swift; sourceTree = "<group>"; };
 		E127DB3F2D48FACB0084A903 /* HandLandmarkerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkerService.swift; sourceTree = "<group>"; };
 		E127DB412D48FB480084A903 /* BottomSheetViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomSheetViewController.swift; sourceTree = "<group>"; };
+		E17EBD502D53BE4C0088572A /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E4456A5664622491FCB77D96 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		F24CAA15765A17483C09BD03 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -151,6 +155,7 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				36428F96DBA54EE3B9F4D12F /* Pods */,
 				ADD1CB73DA6540B228B9B66F /* Frameworks */,
+				40BBE3CCBD2D19CC75B3D263 /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -166,6 +171,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				E17EBD502D53BE4C0088572A /* GoogleService-Info.plist */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
 				97C147021CF9000F007C117D /* Info.plist */,
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
@@ -302,6 +308,8 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				E127DB1B2D3A31AE0084A903 /* Podfile.lock in Resources */,
 				E127DB1C2D3A31AE0084A903 /* Podfile in Resources */,
+				C18606363E84853DDBE07D41 /* GoogleService-Info.plist in Resources */,
+				E17EBD512D53BE4C0088572A /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -523,7 +531,7 @@
 				DEVELOPMENT_TEAM = NY5LAV64QS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -714,7 +722,7 @@
 				DEVELOPMENT_TEAM = NY5LAV64QS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -741,7 +749,7 @@
 				DEVELOPMENT_TEAM = NY5LAV64QS;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

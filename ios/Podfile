@@ -31,18 +31,25 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  pod 'MediaPipeTasksVision'
+    # ---- 불필요한 수동 pod 지정은 모두 제거 ----
+    pod 'MediaPipeTasksVision'            # 필요한 경우만 유지
+    # pod 'Firebase/Core'
+    # pod 'Firebase/Auth'
+    # pod 'GoogleSignIn', '~> 7.1.0'
+    # pod 'GoogleUtilities/Environment', '~> 8.0'
+    # pod 'GoogleUtilities/Logger', '~> 8.0'
+    # ----------------------------------------
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
   target 'RunnerTests' do
     inherit! :search_paths
     # Pods for testing
   end
-
 end
 
- post_install do |installer|
-    installer.pods_project.targets.each do |target|
-      flutter_additional_ios_build_settings(target)
-    end
-    end
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

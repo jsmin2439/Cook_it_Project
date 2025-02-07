@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'Cook_it_login.dart';
 import 'Cook_it_splash.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'book_page.dart'; 
 import 'firebase_options.dart';
+import 'recipe_detail_page.dart';
 
 // 색상 팔레트 (예시)
 const Color kBackgroundColor = Color(0xFFFFF8EC); // 연한 베이지
@@ -12,6 +13,7 @@ const Color kCardColor = Color(0xFFFFECD0); // 더 진한 베이지
 const Color kPinkButtonColor = Color(0xFFFFC7B9); // 연핑크
 const Color kTextColor = Colors.black87; // 문구 색
 const double kBorderRadius = 16.0; // 카드 라운딩
+
 
 void main() {
   runApp(const MyApp());
@@ -72,8 +74,8 @@ class _MainScreenState extends State<MainScreen> {
                     children: [
                       Image.asset(
                         'assets/images/cookie.png', // 쿠키 로고 예시
-                        width: 36,
-                        height: 36,
+                        width: 50,
+                        height: 50,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -140,7 +142,12 @@ class _MainScreenState extends State<MainScreen> {
                     _buildCard(
                       title: "나의 냉장고로 만들 수 있는 음식은 ?",
                       buttonText: "찾아보기",
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const BookPage()),
+                        );
+                      },
                     ),
                     // 구분선
                     Container(
@@ -257,9 +264,9 @@ class _MainScreenState extends State<MainScreen> {
                 },
                 children: [
                   _buildRecipeImage(
-                      'assets/images/tteokbokki.jpg', "매콤한 간장 떡볶이"),
-                  _buildRecipeImage('assets/images/pasta.jpg', "부드러운 크림 파스타"),
-                  _buildRecipeImage('assets/images/pancake.jpg', "달콤한 팬케이크"),
+                      'assets/images/매콤한_간장_떡볶이.jpg', "매콤한 간장 떡볶이"),
+                  _buildRecipeImage('assets/images/부드러운_크림_파스타.jpg', "부드러운 크림 파스타"),
+                  _buildRecipeImage('assets/images/달콤한_팬케이크.jpg', "달콤한 팬케이크"),
                 ],
               ),
             ),
@@ -277,9 +284,46 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 레시피 이미지 위젯
-  Widget _buildRecipeImage(String imagePath, String title) {
-    return Column(
+  
+// 기존 _buildRecipeImage 수정
+Widget _buildRecipeImage(String imagePath, String title) {
+  // 1. 명시적 타입 선언 추가
+  final Map<String, List<Map<String, String>>> recipeData = {
+    '매콤한 간장 떡볶이': [
+      {'name': '떡', 'quantity': '400g'},
+      {'name': '설탕', 'quantity': '4T'},
+      {'name': '물', 'quantity': '2컵'},
+      {'name': '간장', 'quantity': '2T'},
+      {'name': '대파', 'quantity': '1컵'},
+      {'name': '고추장', 'quantity': '1T'},
+      {'name': '오뎅', 'quantity': '200g'},
+      {'name': '고춧가루', 'quantity': '1T'},
+      {'name': '계란', 'quantity': '1개'},
+    ],
+    '부드러운 크림 파스타': [ // 3. 빈 리스트 대체
+      {'name': '파스타면', 'quantity': '200g'},
+      {'name': '생크림', 'quantity': '1컵'},
+    ],
+    '달콤한 팬케이크': [ // 3. 빈 리스트 대체
+      {'name': '밀가루', 'quantity': '1.5컵'},
+      {'name': '우유', 'quantity': '1컵'},
+    ],
+  };
+
+  return GestureDetector(
+    onTap: () {
+      // 2. null 체크 추가 (! 연산자 사용)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RecipeDetailPage(
+            title: title,
+            ingredients: recipeData[title]!,
+          ),
+        ),
+      );
+    },
+    child: Column(
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -293,8 +337,9 @@ class _MainScreenState extends State<MainScreen> {
         const SizedBox(height: 8),
         Text(title),
       ],
-    );
-  }
+    ),
+  );
+}
 
   // 페이지 인디케이터용 작은 원
   Widget _buildDot({required bool isActive}) {

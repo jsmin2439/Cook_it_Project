@@ -139,7 +139,6 @@ class LoginScreen extends StatelessWidget {
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'Cook_it_main.dart';
 
 class CookItLogin extends StatefulWidget {
@@ -192,7 +191,7 @@ class _CookItLoginState extends State<CookItLogin> {
   Future<void> _signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) return; // 로그인 취소 시
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -211,7 +210,6 @@ class _CookItLoginState extends State<CookItLogin> {
   // 이메일 회원가입
   Future<void> _signUpWithEmailAndPassword() async {
     if (!_validateInputs()) return;
-
     try {
       await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -226,7 +224,6 @@ class _CookItLoginState extends State<CookItLogin> {
   // 이메일 로그인
   Future<void> _signInWithEmailAndPassword() async {
     if (!_validateInputs()) return;
-
     try {
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -235,33 +232,6 @@ class _CookItLoginState extends State<CookItLogin> {
       _moveToMainScreen();
     } on FirebaseAuthException catch (e) {
       _showErrorDialog(_getErrorMessage(e));
-    }
-  }
-
-  // 애플 로그인
-  Future<void> _signInWithApple() async {
-    if (Theme.of(context).platform != TargetPlatform.iOS) {
-      _showErrorDialog("애플 로그인은 iOS에서만 지원됩니다.");
-      return;
-    }
-
-    try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-
-      final oauthCredential = OAuthProvider("apple.com").credential(
-        idToken: credential.identityToken,
-        accessToken: credential.authorizationCode,
-      );
-
-      await _auth.signInWithCredential(oauthCredential);
-      _moveToMainScreen();
-    } catch (e) {
-      _showErrorDialog(e.toString());
     }
   }
 
@@ -294,6 +264,7 @@ class _CookItLoginState extends State<CookItLogin> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // 이메일 입력 필드
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
@@ -303,6 +274,7 @@ class _CookItLoginState extends State<CookItLogin> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
+            // 비밀번호 입력 필드
             TextField(
               controller: _passwordController,
               decoration: const InputDecoration(
@@ -312,6 +284,7 @@ class _CookItLoginState extends State<CookItLogin> {
               obscureText: true,
             ),
             const SizedBox(height: 24),
+            // 로그인 및 회원가입 버튼
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -326,6 +299,7 @@ class _CookItLoginState extends State<CookItLogin> {
               ],
             ),
             const SizedBox(height: 16),
+            // 구글 로그인 버튼
             ElevatedButton(
               onPressed: _signInWithGoogle,
               style: ElevatedButton.styleFrom(
@@ -334,10 +308,6 @@ class _CookItLoginState extends State<CookItLogin> {
               ),
               child: const Text('구글 로그인'),
             ),
-            if (Theme.of(context).platform == TargetPlatform.iOS)
-              SignInWithAppleButton(
-                onPressed: _signInWithApple,
-              ),
           ],
         ),
       ),

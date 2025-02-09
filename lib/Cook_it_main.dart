@@ -1,26 +1,25 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
 import 'Cook_it_login.dart';
 import 'Cook_it_splash.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'book_page.dart'; 
-import 'firebase_options.dart';
 import 'recipe_detail_page.dart';
+import 'book_page.dart';
 
 // 색상 팔레트 (예시)
 const Color kBackgroundColor = Color(0xFFFFF8EC); // 연한 베이지
-const Color kCardColor = Color(0xFFFFECD0); // 더 진한 베이지
+const Color kCardColor = Color(0xFFFFECD0);       // 더 진한 베이지
 const Color kPinkButtonColor = Color(0xFFFFC7B9); // 연핑크
-const Color kTextColor = Colors.black87; // 문구 색
-const double kBorderRadius = 16.0; // 카드 라운딩
-
+const Color kTextColor = Colors.black87;          // 문구 색
+const double kBorderRadius = 16.0;                // 카드 라운딩
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +31,7 @@ class MyApp extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -42,6 +41,50 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   int _currentPage = 0;
   final PageController _pageController = PageController();
+
+  /// 서버에서 받아온 레시피 목록 (3개만 사용한다고 가정)
+  List<dynamic> _recommendedRecipes = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecommendedRecipes();
+  }
+
+  /// 서버와 통신하여 추천 레시피 목록을 가져오는 함수
+  Future<void> _fetchRecommendedRecipes() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 예시: POST로 userId 넘기는 구조
+      final uri = Uri.parse("https://api-lij5rc3veq-uc.a.run.app/recommend-recipes");
+      final response = await http.post(
+        uri,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"userId": "user123"}),  // raw 데이터 예시
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data["success"] == true && data["recommendedRecipes"] != null) {
+          List<dynamic> recipes = data["recommendedRecipes"];
+          // 최대 3개만 사용
+          _recommendedRecipes = recipes.take(3).toList();
+        }
+      } else {
+        debugPrint('서버 통신 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('오류 발생: $e');
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -63,17 +106,16 @@ class _MainScreenState extends State<MainScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 영역 (Cook it 로고 + 검색바)
+            // 상단 영역 (Cook it 로고 + 알림아이콘)
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Row(
                 children: [
-                  // 왼쪽 Cook it 로고 (이미지+텍스트)
+                  // Cook it 로고
                   Row(
                     children: [
                       Image.asset(
-                        'assets/images/cookie.png', // 쿠키 로고 예시
+                        'assets/images/cookie.png', // 쿠키 로고
                         width: 50,
                         height: 50,
                       ),
@@ -89,7 +131,7 @@ class _MainScreenState extends State<MainScreen> {
                     ],
                   ),
                   const Spacer(),
-                  // 벨 아이콘
+                  // 알림 아이콘
                   IconButton(
                     icon: const Icon(Icons.notifications_none),
                     color: kTextColor,
@@ -99,14 +141,11 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
             // 구분선
-            Container(
-              height: 1,
-              color: Colors.black26,
-            ),
+            Container(height: 1, color: Colors.black26),
+
             // 상단 검색바
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -114,24 +153,25 @@ class _MainScreenState extends State<MainScreen> {
                   border: Border.all(color: Colors.black26),
                 ),
                 child: TextField(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: "맛있는 요리 하실 준비 되셨나요??",
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    suffixIcon: const Icon(Icons.search, color: Colors.black45),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    suffixIcon: Icon(Icons.search, color: Colors.black45),
                   ),
                 ),
               ),
             ),
+
             const SizedBox(height: 12),
-            // 스크롤 가능한 영역
+            // 스크롤 가능 영역
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
                     // 1) 내 취향에 맞는 AI 레시피
                     _buildAiRecipeCard(),
+
                     // 구분선
                     Container(
                       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -181,13 +221,13 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     // 5) 싫어하거나 피하고 싶은 재료가 있나요?
                     _buildIngredientsCard(),
-                    const SizedBox(
-                        height: 80), // 맨 아래 여백 (BottomNavigationBar 공간)
+                    const SizedBox(height: 80), // 하단여백 (BottomNavigationBar 공간)
                   ],
                 ),
               ),
             ),
-            // 로그인 버튼 추가
+
+            // 로그인 버튼
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: ElevatedButton(
@@ -198,6 +238,7 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
+
       // 하단 네비게이션 바
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -230,7 +271,7 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // "내 취향에 맞는 AI 레시피" 카드
+  /// "내 취향에 맞는 AI 레시피" 카드
   Widget _buildAiRecipeCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -246,37 +287,49 @@ class _MainScreenState extends State<MainScreen> {
             const SizedBox(height: 16),
             const Text(
               "내 취향에 맞는 AI 레시피",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            // PageView 추가
-            SizedBox(
-              height: 150,
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
-                },
-                children: [
-                  _buildRecipeImage(
-                      'assets/images/매콤한_간장_떡볶이.jpg', "매콤한 간장 떡볶이"),
-                  _buildRecipeImage('assets/images/부드러운_크림_파스타.jpg', "부드러운 크림 파스타"),
-                  _buildRecipeImage('assets/images/달콤한_팬케이크.jpg', "달콤한 팬케이크"),
-                ],
+
+            // 로딩 상태 표시
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              )
+            else if (_recommendedRecipes.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text("추천 레시피가 없습니다."),
+              )
+            else
+              // PageView
+              SizedBox(
+                height: 180,
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  children: _recommendedRecipes.map((recipe) {
+                    return _buildRecipeItem(recipe);
+                  }).toList(),
+                ),
               ),
-            ),
+
             const SizedBox(height: 12),
-            // 페이지 인디케이터 (원 3개 예시)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                  3, (index) => _buildDot(isActive: index == _currentPage)),
-            ),
+
+            // 페이지 인디케이터
+            if (_recommendedRecipes.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _recommendedRecipes.length,
+                  (index) => _buildDot(isActive: index == _currentPage),
+                ),
+              ),
             const SizedBox(height: 16),
           ],
         ),
@@ -284,64 +337,52 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  
-// 기존 _buildRecipeImage 수정
-Widget _buildRecipeImage(String imagePath, String title) {
-  // 1. 명시적 타입 선언 추가
-  final Map<String, List<Map<String, String>>> recipeData = {
-    '매콤한 간장 떡볶이': [
-      {'name': '떡', 'quantity': '400g'},
-      {'name': '설탕', 'quantity': '4T'},
-      {'name': '물', 'quantity': '2컵'},
-      {'name': '간장', 'quantity': '2T'},
-      {'name': '대파', 'quantity': '1컵'},
-      {'name': '고추장', 'quantity': '1T'},
-      {'name': '오뎅', 'quantity': '200g'},
-      {'name': '고춧가루', 'quantity': '1T'},
-      {'name': '계란', 'quantity': '1개'},
-    ],
-    '부드러운 크림 파스타': [ // 3. 빈 리스트 대체
-      {'name': '파스타면', 'quantity': '200g'},
-      {'name': '생크림', 'quantity': '1컵'},
-    ],
-    '달콤한 팬케이크': [ // 3. 빈 리스트 대체
-      {'name': '밀가루', 'quantity': '1.5컵'},
-      {'name': '우유', 'quantity': '1컵'},
-    ],
-  };
+  /// AI 레시피 개별 아이템 (이미지 + 이름)
+  Widget _buildRecipeItem(dynamic recipe) {
+    final String imageUrl = recipe["ATT_FILE_NO_MAIN"] ?? ""; // 대표 이미지
+    final String recipeName = recipe["RCP_NM"] ?? "No Name";   // 레시피명
 
-  return GestureDetector(
-    onTap: () {
-      // 2. null 체크 추가 (! 연산자 사용)
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => RecipeDetailPage(
-            title: title,
-            ingredients: recipeData[title]!,
+    return GestureDetector(
+      onTap: () {
+        // 탭하면 RecipeDetailPage로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RecipeDetailPage(recipeData: recipe),
           ),
-        ),
-      );
-    },
-    child: Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
-            imagePath,
-            width: 180,
-            height: 120,
-            fit: BoxFit.cover,
+        );
+      },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // 대표 이미지
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              imageUrl,
+              width: 160,
+              height: 110,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 160,
+                  height: 110,
+                  color: Colors.grey,
+                  alignment: Alignment.center,
+                  child: const Text("No Image"),
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(title),
-      ],
-    ),
-  );
-}
+          const SizedBox(height: 8),
+          // 레시피 이름
+          Text(recipeName, style: const TextStyle(fontSize: 16)),
+        ],
+      ),
+    );
+  }
 
-  // 페이지 인디케이터용 작은 원
+  /// 페이지 인디케이터용 작은 원
   Widget _buildDot({required bool isActive}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -354,7 +395,7 @@ Widget _buildRecipeImage(String imagePath, String title) {
     );
   }
 
-  // 단순 카드 구조
+  /// 단순 카드 구조
   Widget _buildCard({
     required String title,
     required String buttonText,
@@ -374,10 +415,7 @@ Widget _buildRecipeImage(String imagePath, String title) {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -397,7 +435,7 @@ Widget _buildRecipeImage(String imagePath, String title) {
     );
   }
 
-  // "싫어하거나 피하고 싶은 재료가 있나요?" 카드
+  /// "싫어하거나 피하고 싶은 재료가 있나요?" 카드
   Widget _buildIngredientsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -413,10 +451,7 @@ Widget _buildRecipeImage(String imagePath, String title) {
             const SizedBox(height: 16),
             const Text(
               "싫어하거나 피하고 싶은 재료가 있나요?",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Row(
@@ -436,7 +471,7 @@ Widget _buildRecipeImage(String imagePath, String title) {
                 ),
               ),
               onPressed: () {
-                // 수정하기 등
+                // TODO: 수정하기 등
               },
               child: const Text("수정하기"),
             ),
@@ -458,51 +493,6 @@ Widget _buildRecipeImage(String imagePath, String title) {
       child: Text(
         label,
         style: const TextStyle(fontSize: 14, color: Colors.black87),
-      ),
-    );
-  }
-}
-
-class CookItMain extends StatefulWidget {
-  const CookItMain({Key? key}) : super(key: key);
-
-  @override
-  _CookItMainState createState() => _CookItMainState();
-}
-
-class _CookItMainState extends State<CookItMain> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // 로그아웃
-  Future<void> _signOut() async {
-    await _auth.signOut();
-    // 로그아웃 후 로그인 화면으로
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const CookItLogin()),
-      (route) => false,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 현재 로그인된 유저
-    final user = _auth.currentUser;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Cook It - Main'),
-        actions: [
-          IconButton(
-            onPressed: _signOut,
-            icon: const Icon(Icons.logout),
-          )
-        ],
-      ),
-      body: Center(
-        child: user == null
-            ? const Text('로그인 정보가 없습니다')
-            : Text('반갑습니다, ${user.email ?? user.uid} 님!'),
       ),
     );
   }

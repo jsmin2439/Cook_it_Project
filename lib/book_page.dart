@@ -1,55 +1,99 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'cook_it_login.dart';
-import 'firebase_options.dart';
 
 class BookPage extends StatefulWidget {
-  const BookPage({super.key});
+  final Map<String, dynamic>? recipeData; // 레시피 데이터를 받아옴 (null 가능성 대비)
+
+  const BookPage({super.key, this.recipeData});
 
   @override
-  _BookPageState createState() => _BookPageState();
+  State<BookPage> createState() => _BookPageState();
 }
 
 class _BookPageState extends State<BookPage> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isCameraActive = false; // 카메라 상태 추적
 
   static const _cameraChannel = MethodChannel('com.example.mediapipe2/camera');
-  static const _gestureChannel =
-      MethodChannel('com.example.mediapipe2/gesture');
+  static const _gestureChannel = MethodChannel('com.example.mediapipe2/gesture');
+
+  List<Map<String, String>> steps = [];
 
   @override
   void initState() {
     super.initState();
-    _initCamera();
     _setupGestureListener();
+    _prepareSteps();
+  }
+
+  @override
+  void dispose() {
+    _stopCamera(); // 페이지 종료 시 카메라 종료
+    super.dispose();
   }
 
   Future<void> _initCamera() async {
     try {
       await _cameraChannel.invokeMethod('startCamera');
+      setState(() => _isCameraActive = true);
     } on PlatformException catch (e) {
       debugPrint("Camera Error: ${e.message}");
     }
   }
 
+  Future<void> _stopCamera() async {
+    try {
+      await _cameraChannel.invokeMethod('stopCamera');
+      setState(() => _isCameraActive = false);
+    } on PlatformException catch (e) {
+      debugPrint("Camera Stop Error: ${e.message}");
+    }
+  }
+
+  void _toggleCamera() async {
+    if (_isCameraActive) {
+      await _stopCamera();
+    } else {
+      await _initCamera();
+    }
+  }
+
   void _setupGestureListener() {
     _gestureChannel.setMethodCallHandler((call) async {
+      if (!_isCameraActive) return; // 카메라 비활성화 시 제스처 무시
       if (call.method == 'swipe') {
         final direction = call.arguments as String;
-        if (direction == 'left') {
-          _nextPage();
-        } else if (direction == 'right') {
-          _prevPage();
-        }
+        if (direction == 'left') _nextPage();
+        else if (direction == 'right') _prevPage();
       }
-      return;
     });
   }
 
+  /// JSON에서 MANUAL01~20 / MANUAL_IMG01~20을 추출하여
+  /// 빈 값("")이 아닌 경우 steps 리스트에 담기
+  void _prepareSteps() {
+    if (widget.recipeData == null) return;
+    final data = widget.recipeData!;
+    // 1~20까지 돌면서 단계 텍스트와 이미지 추출
+    for (int i = 1; i <= 20; i++) {
+      final textKey = "MANUAL${i.toString().padLeft(2, '0')}";
+      final imgKey = "MANUAL_IMG${i.toString().padLeft(2, '0')}";
+
+      final stepText = data[textKey] ?? "";
+      final stepImg = data[imgKey] ?? "";
+
+      if (stepText.isNotEmpty) {
+        steps.add({
+          "text": stepText,
+          "img": stepImg,
+        });
+      }
+    }
+  }
+
   void _nextPage() {
-    if (_currentPage < 4) {
+    if (_currentPage < _getTotalPages() - 1) {
       setState(() {
         _currentPage++;
       });
@@ -74,166 +118,144 @@ class _BookPageState extends State<BookPage> {
     }
   }
 
+  /// 2단계씩 보여줄 것이므로 총 페이지 수 = ceil(steps.length / 2)
+  int _getTotalPages() {
+    return (steps.length / 2).ceil();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (steps.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Recipe Book"),
+          actions: [_buildCameraToggle()], // 카메라 토글 버튼 추가
+        ),
+        body: const Center(child: Text("조리 단계가 없습니다.")),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Recipe Book"),
+        actions: [_buildCameraToggle()], // 카메라 토글 버튼 추가
+      ),
       body: Column(
         children: [
-          // 상단 80% 영역: Flutter Book UI (5페이지)
           Expanded(
-            flex: 100,
-            child: PageView(
+            flex: 80,
+            child: PageView.builder(
               controller: _pageController,
-              children: [
-                _buildCoverPage(), // 1. 표지 페이지
-                _buildRecipeListPage(), // 2. 레시피 목록 페이지
-                _buildRecipeDetailPage(), // 3. 요리 상세 정보 페이지
-                _buildCookingStepsPage(), // 4. 조리 단계 페이지
-                _buildCompletionPage(), // 5. 완성 페이지
-              ],
+              itemCount: _getTotalPages(),
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (context, index) {
+                return _buildRecipeBookPage(index);
+              },
             ),
           ),
-          // 하단 20% 영역: 네이티브 카메라/오버레이
-          Expanded(
-            flex: 0,
-            child: Container(color: Colors.transparent),
-          ),
         ],
       ),
     );
   }
 
-  /// 1️⃣ 표지 페이지
-  Widget _buildCoverPage() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            "손으로 넘기는 책",
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _nextPage,
-            child: const Text("시작하기"),
-          ),
-        ],
+  Widget _buildCameraToggle() {
+    return IconButton(
+      icon: Icon(_isCameraActive ? Icons.videocam : Icons.videocam_off),
+      onPressed: _toggleCamera,
+    );
+  }
+
+  /// 레시피북 한 페이지에 2단계씩 보여주는 위젯
+  Widget _buildRecipeBookPage(int pageIndex) {
+    final int startIndex = pageIndex * 2;
+    final int endIndex = startIndex + 2;
+    bool isLastPage = (pageIndex == _getTotalPages() - 1);
+
+
+    List<Map<String, String>> pageSteps = steps.sublist(
+      startIndex,
+      endIndex > steps.length ? steps.length : endIndex,
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12),
+        child: Column(
+          children: [
+            Text(
+              widget.recipeData?["RCP_NM"] ?? "레시피북",
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const Divider(thickness: 2),
+            Expanded(
+              child: ListView.builder(
+                itemCount: pageSteps.length,
+                itemBuilder: (context, i) {
+                  return _buildStepItem(pageSteps[i], startIndex + i + 1);
+                },
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: _prevPage,
+                  child: const Text("이전 단계"),
+                ),
+                isLastPage
+                    ? ElevatedButton(
+              onPressed: () {
+                _stopCamera(); // 카메라 종료 추가
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+              child: const Text("홈으로 돌아가기")
+              )
+                    : ElevatedButton(
+                        onPressed: _nextPage,
+                        child: const Text("다음 단계"),
+                      ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// 2️⃣ 레시피 목록 페이지
-  Widget _buildRecipeListPage() {
+
+  /// 각 단계별 위젯
+  Widget _buildStepItem(Map<String, String> step, int stepNumber) {
+    final text = step["text"] ?? "";
+    final imgUrl = step["img"] ?? "";
+
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          _recipeCard("매콤한 간장 떡볶이", "매콤한_간장_떡볶이.jpg"),
-          _recipeCard("부드러운 크림 파스타", "부드러운_크림_파스타.jpg"),
-          _recipeCard("달콤한 팬케이크", "달콤한_팬케이크.jpg"),
-        ],
-      ),
-    );
-  }
-
-  Widget _recipeCard(String title, String imageName) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        leading: Image.asset("assets/images/$imageName",
-            width: 60, fit: BoxFit.cover),
-        title: Text(title, style: const TextStyle(fontSize: 18)),
-        trailing: const Icon(Icons.arrow_forward),
-      ),
-    );
-  }
-
-  /// 3️⃣ 요리 상세 정보 페이지
-  Widget _buildRecipeDetailPage() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 50), // 위 간격 추가
-          const Text(
-            "매콤한 간장 떡볶이",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+          Text("STEP $stepNumber", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Center(
-            child: Image.asset("assets/images/매콤한_간장_떡볶이", height: 200),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "재료",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const Text("- 떡 400g\n- 물 2컵\n- 대파 1개\n- 오뎅 200g\n- 계란 1개"),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _nextPage,
-            child: const Text("다음 단계"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 4️⃣ 조리 단계 페이지
-  Widget _buildCookingStepsPage() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 50), // 위 간격 추가
-          const Text(
-            "조리 단계",
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          const Text("1. 떡을 찬물에 10분 담가 말랑하게 만듭니다."),
-          const Text("2. 오뎅을 먹기 좋은 크기로 썰고, 대파는 송송 썰어 준비합니다."),
-          const Text("3. 양념장을 만들고, 떡과 함께 끓입니다."),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ElevatedButton(
-                onPressed: _prevPage,
-                child: const Text("이전 단계"),
+          if (imgUrl.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imgUrl,
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 150,
+                    color: Colors.grey[300],
+                    alignment: Alignment.center,
+                    child: const Text("No Image"),
+                  );
+                },
               ),
-              ElevatedButton(
-                onPressed: _nextPage,
-                child: const Text("완료"),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 5️⃣ 완성 페이지
-  Widget _buildCompletionPage() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text(
-            "요리를 완성했습니다!",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              _pageController.jumpToPage(0);
-            },
-            child: const Text("홈으로 돌아가기"),
-          ),
+            ),
+          const SizedBox(height: 8),
+          Text(text, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );

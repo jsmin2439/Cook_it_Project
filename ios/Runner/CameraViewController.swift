@@ -62,7 +62,7 @@ class CameraViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     setupUI()
-
+    setupFlutterMethodChannel() // 추가된 부분
     // CameraFeedService에서 발생하는 이벤트를 받을 수 있도록 delegate 설정
     cameraFeedService.delegate = self
   }
@@ -91,6 +91,7 @@ class CameraViewController: UIViewController {
   /// 뷰가 사라질 때 카메라 세션 중지
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
+    stopCamera()
     cameraFeedService.stopSession()
   }
 
@@ -315,4 +316,49 @@ extension CameraViewController: HandLandmarkerServiceLiveStreamDelegate {
     // 아직 기준치 미달이면 스와이프 미인식
     return nil
   }
+}
+
+// MARK: - Flutter MethodChannel Handler
+extension CameraViewController {
+    // Flutter와 통신할 MethodChannel 설정
+    private func setupFlutterMethodChannel() {
+        guard let window = UIApplication.shared.windows.first,
+              let flutterViewController = window.rootViewController as? FlutterViewController else {
+            print("⚠️ FlutterViewController 연결 실패")
+            return
+        }
+        
+        let channel = FlutterMethodChannel(
+            name: "com.example.mediapipe2/camera",
+            binaryMessenger: flutterViewController.binaryMessenger
+        )
+        
+        channel.setMethodCallHandler { [weak self] call, result in
+            guard let self = self else {
+                result(FlutterError(code: "DEALLOCATED", message: "Controller deallocated", details: nil))
+                return
+            }
+            
+            switch call.method {
+            case "startCamera":
+                self.startCamera()
+                result(nil)
+            case "stopCamera":
+                self.stopCamera()
+                result(nil)
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
+    }
+    
+    @objc func startCamera() {
+        cameraFeedService.startLiveCameraSession { [weak self] status in
+            // 카메라 시작 로직 (기존 코드 재사용)
+        }
+    }
+    
+    @objc func stopCamera() {
+        cameraFeedService.stopSession() // AVCaptureSession 중지
+    }
 }

@@ -44,12 +44,12 @@ class _BookPageState extends State<BookPage> {
 
   Future<void> _stopCamera() async {
     try {
-      await _cameraChannel.invokeMethod('stopCamera');
-      setState(() => _isCameraActive = false);
+        await _cameraChannel.invokeMethod('stopCamera');
+        setState(() => _isCameraActive = false);
     } on PlatformException catch (e) {
-      debugPrint("Camera Stop Error: ${e.message}");
+        debugPrint("Camera Stop Error: ${e.message}");
     }
-  }
+}
 
   void _toggleCamera() async {
     if (_isCameraActive) {
@@ -241,7 +241,7 @@ class _BookPageState extends State<BookPage> {
               borderRadius: BorderRadius.circular(8),
               child: Image.network(
                 imgUrl,
-                height: 150,
+                height: 200,
                 width: double.infinity,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {

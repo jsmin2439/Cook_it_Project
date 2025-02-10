@@ -360,13 +360,13 @@ class _MainScreenState extends State<MainScreen> {
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
               imageUrl,
-              width: 160,
-              height: 110,
+              width: 200,
+              height: 130,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  width: 160,
-                  height: 110,
+                  width: 200,
+                  height: 130,
                   color: Colors.grey,
                   alignment: Alignment.center,
                   child: const Text("No Image"),

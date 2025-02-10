@@ -2,55 +2,86 @@ const express = require("express");
 const multer = require("multer");
 const vision = require("@google-cloud/vision");
 const admin = require("firebase-admin");
+const { Storage } = require("@google-cloud/storage");
 const OpenAI = require("openai");
-const path = require("path");
-const dotenv = require("dotenv");
-const spellchecker = require("spellchecker");
 const levenshtein = require("fast-levenshtein");
+require("dotenv").config();
 
-dotenv.config();
-
-// Firebase 초기화
+// Firebase 서비스 계정 및 Vision API 키 파일 불러오기
 const serviceAccount = require("./serviceAccountKey.json");
+const visionCredentials = require("./vision-key.json");
+
+// Firebase Admin 초기화
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
+// Firestore DB 및 Cloud Storage 클라이언트
 const db = admin.firestore();
+const storage = new Storage({
+  keyFilename: "./serviceAccountKey.json",
+});
+const storageBucket = "cook-it-project-dee30.firebasestorage.app"; // 실제 버킷 이름 사용
+if (!storageBucket) {
+  throw new Error("Cloud Storage 버킷이 설정되지 않았습니다.");
+}
+const bucket = storage.bucket(storageBucket);
 
-// OpenAI 설정
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// OpenAI API 키 (로컬 환경 변수 사용)
+const openaiKey = process.env.OPENAI_KEY;
+if (!openaiKey) {
+  throw new Error("OPENAI_KEY 환경 변수가 설정되지 않았습니다.");
+}
+const openai = new OpenAI({ apiKey: openaiKey });
 
-// Google Vision API 클라이언트 생성
+// Vision API 클라이언트 생성
 const visionClient = new vision.ImageAnnotatorClient({
-  keyFilename: path.join(__dirname, "vision-key.json"),
+  credentials: visionCredentials,
 });
 
+// Express 앱 생성 및 미들웨어 설정
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// 파일 업로드를 위한 multer 설정
-const upload = multer({ dest: "uploads/" });
+// (필요시) CORS 미들웨어 – 라우트 등록 전에 추가하는 것이 좋습니다.
+app.use((req, res, next) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") {
+    res.set("Access-Control-Allow-Methods", "GET, POST");
+    res.set("Access-Control-Allow-Headers", "Content-Type");
+    res.set("Access-Control-Max-Age", "3600");
+    res.status(204).send("");
+  } else {
+    next();
+  }
+});
 
-// 스펠링 교정 함수
-function correctSpelling(ingredient) {
-  const corrected = spellchecker.getCorrectionsForMisspelling(ingredient);
-  return corrected.length > 0 ? corrected[0] : ingredient;
-}
+// 헬스 체크 라우트
+app.get("/", (req, res) => {
+  res.status(200).send("Server is running");
+});
 
-// 스펠링 유사도를 계산하여 매칭도 평가하는 함수
+// Multer 설정 (메모리 저장소 사용)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 30 * 1024 * 1024 }
+});
+
+// 스펠링 유사도 계산 함수
 function getStringSimilarity(str1, str2) {
   const distance = levenshtein.get(str1, str2);
   const maxLength = Math.max(str1.length, str2.length);
-  return 1 - distance / maxLength; // 0 ~ 1 사이의 유사도 값 반환
+  return 1 - distance / maxLength;
 }
 
-// 사용자의 재료와 레시피의 재료를 비교하는 함수
+// 사용자의 재료와 레시피 재료 매칭도 계산 함수
 function calculateMatchScore(userIngredients, recipeIngredients) {
   let matchedCount = 0;
-  recipeIngredients.forEach(recipeIngredient => {
-    userIngredients.forEach(userIngredient => {
+  recipeIngredients.forEach((recipeIngredient) => {
+    userIngredients.forEach((userIngredient) => {
       const similarity = getStringSimilarity(recipeIngredient, userIngredient);
-      if (similarity > 0.8) { // 유사도 80% 이상이면 매칭 처리
+      if (similarity > 0.8) {
         matchedCount += 1;
       }
     });
@@ -58,7 +89,7 @@ function calculateMatchScore(userIngredients, recipeIngredients) {
   return matchedCount / recipeIngredients.length;
 }
 
-// 사용자의 식재료 저장
+// 사용자 식재료 저장 함수
 async function saveIngredients(userId, ingredients) {
   const userRef = db.collection("user_ingredients").doc(userId);
   try {
@@ -69,7 +100,7 @@ async function saveIngredients(userId, ingredients) {
   }
 }
 
-// 사용자의 식재료 가져오기
+// 사용자 식재료 가져오기 함수
 async function getUserIngredients(userId) {
   try {
     const userRef = db.collection("user_ingredients").doc(userId);
@@ -85,17 +116,19 @@ async function getUserIngredients(userId) {
   }
 }
 
-// 레시피 데이터를 가져오고 사용자의 식재료와 매칭하여 점수 계산
+// 레시피 데이터 검색 및 매칭도 계산 함수
 async function findTopRecipes(userIngredients) {
   try {
     const recipesSnapshot = await db.collection("recipes").get();
-    const recipes = recipesSnapshot.docs.map(doc => {
+    const recipes = recipesSnapshot.docs.map((doc) => {
       const data = doc.data();
-      // 재료 목록을 소문자 및 공백 제거 처리
-      const ingredients = data.RCP_PARTS_DTLS.split(",").map(ingredient =>
-        ingredient.trim().toLowerCase()
+      // 재료 목록에서 공백 제거 및 소문자 처리
+      const ingredients = data.RCP_PARTS_DTLS.split(",").map((ingredient) =>
+          ingredient.trim().toLowerCase()
       );
-      const correctedUserIngredients = userIngredients.map(ing => ing.toLowerCase());
+      const correctedUserIngredients = userIngredients.map((ing) =>
+          ing.toLowerCase()
+      );
       const matchScore = calculateMatchScore(correctedUserIngredients, ingredients);
       return {
         id: doc.id,
@@ -103,13 +136,12 @@ async function findTopRecipes(userIngredients) {
         ingredients,
         matchScore,
         category: data.RCP_PAT2,
-        // firebase의 전체 데이터 + 매칭된 재료 정보를 추가합니다.
         fullData: {
           ...data,
-          matchedIngredients: ingredients.filter(ingredient =>
-            correctedUserIngredients.some(userIngredient =>
-              ingredient.includes(userIngredient)
-            )
+          matchedIngredients: ingredients.filter((ingredient) =>
+              correctedUserIngredients.some((userIngredient) =>
+                  ingredient.includes(userIngredient)
+              )
           ),
           matchScore,
         },
@@ -122,18 +154,17 @@ async function findTopRecipes(userIngredients) {
   }
 }
 
-// GPT-4를 사용하여 최종 레시피 3개 추천 (firebase에서 추천된 ID로 직접 조회)
+// GPT-4를 사용하여 최종 레시피 3개 추천 함수
 async function recommendTop3Recipes(userIngredients, topRecipes) {
   try {
-    // GPT에 전달할 데이터는 간략화된 형태로 전달합니다.
-    const simplifiedRecipes = topRecipes.map(recipe => ({
+    const simplifiedRecipes = topRecipes.map((recipe) => ({
       id: recipe.id,
       name: recipe.name,
       matchScore: recipe.matchScore,
-      matchedIngredients: recipe.ingredients.filter(ingredient =>
-        userIngredients.some(userIngredient =>
-          ingredient.includes(userIngredient.toLowerCase())
-        )
+      matchedIngredients: recipe.ingredients.filter((ingredient) =>
+          userIngredients.some((userIngredient) =>
+              ingredient.includes(userIngredient.toLowerCase())
+          )
       ),
       category: recipe.category,
     }));
@@ -144,7 +175,7 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
         {
           role: "system",
           content:
-            "상위 50개 레시피 중에서 재료 매칭도를 우선적으로 고려하고, 카테고리 다양성을 판단하여 최적의 3개 레시피를 추천하세요.",
+              "상위 50개 레시피 중에서 재료 매칭도를 우선적으로 고려하고, 카테고리 다양성을 판단하여 최적의 3개 레시피를 추천하세요.",
         },
         {
           role: "user",
@@ -166,44 +197,53 @@ ${JSON.stringify(simplifiedRecipes, null, 1)}
 
     const recommendations = JSON.parse(gptResponse.choices[0].message.content);
 
-    // GPT가 추천한 레시피 ID 3개를 기반으로 firebase에서 전체 레시피 데이터를 조회합니다.
     const recommendedRecipesData = await Promise.all(
-      recommendations.recommendedRecipes.map(async recipeId => {
-        const doc = await db.collection("recipes").doc(recipeId).get();
-        return doc.exists ? { id: doc.id, ...doc.data() } : null;
-      })
+        recommendations.recommendedRecipes.map(async (recipeId) => {
+          const doc = await db.collection("recipes").doc(recipeId).get();
+          return doc.exists ? { id: doc.id, ...doc.data() } : null;
+        })
     );
 
     const validRecommendedRecipes = recommendedRecipesData.filter(Boolean);
 
-    // 추천된 레시피가 3개 미만이면 fallback: 상위 3개 레시피 반환
     if (validRecommendedRecipes.length < 3) {
-      console.log("추천된 레시피가 충분하지 않아 상위 3개를 반환합니다.");
-      return topRecipes.slice(0, 3).map(recipe => recipe.fullData);
+      console.log("추천된 레시피가 충분치 않아 상위 3개를 반환합니다.");
+      return topRecipes.slice(0, 3).map((recipe) => recipe.fullData);
     }
     return validRecommendedRecipes;
   } catch (error) {
     console.error("GPT 레시피 추천 오류:", error);
     if (error.code === "rate_limit_exceeded") {
       console.log("Rate limit 초과, 상위 3개 레시피를 반환합니다.");
-      return topRecipes.slice(0, 3).map(recipe => recipe.fullData);
+      return topRecipes.slice(0, 3).map((recipe) => recipe.fullData);
     }
     throw error;
   }
 }
 
-// Vision API를 활용한 식재료 분석
+// 이미지 업로드 및 Vision API 분석 라우트
 app.post("/upload-ingredient", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({ error: "이미지가 필요합니다." });
     }
     const userId = req.body.userId || "default";
-    const [result] = await visionClient.labelDetection(req.file.path);
+    const fileName = `ingredients/${Date.now()}-${req.file.originalname}`;
+    const file = bucket.file(fileName);
+
+    await file.save(req.file.buffer, {
+      metadata: { contentType: req.file.mimetype },
+    });
+
+    // Vision API 호출 전에 업로드 완료 대기
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    const [result] = await visionClient.labelDetection(`gs://${storageBucket}/${fileName}`);
     const labels = result.labelAnnotations;
     const topLabel = labels
-      .filter(label => label.score > 0.7 && label.description !== "Food")
-      .sort((a, b) => b.score - a.score)[0];
+        .filter((label) => label.score > 0.7 && label.description !== "Food")
+        .sort((a, b) => b.score - a.score)[0];
+
     if (!topLabel) {
       return res.status(404).json({ error: "식재료를 인식하지 못했습니다." });
     }
@@ -215,7 +255,7 @@ app.post("/upload-ingredient", upload.single("image"), async (req, res) => {
   }
 });
 
-// 레시피 추천 API 엔드포인트
+// 레시피 추천 라우트
 app.post("/recommend-recipes", async (req, res) => {
   try {
     const { userId } = req.body;
@@ -229,11 +269,10 @@ app.post("/recommend-recipes", async (req, res) => {
     const topRecipes = await findTopRecipes(userIngredients);
     const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes);
 
-    // firebase의 레시피 데이터에 포함된 모든 필드를 응답 객체에 포함합니다.
     res.json({
       success: true,
       userIngredients,
-      recommendedRecipes: recommendedRecipes.map(recipe => ({
+      recommendedRecipes: recommendedRecipes.map((recipe) => ({
         id: recipe.id,
         ATT_FILE_NO_MAIN: recipe.ATT_FILE_NO_MAIN,
         ATT_FILE_NO_MK: recipe.ATT_FILE_NO_MK,
@@ -298,8 +337,17 @@ app.post("/recommend-recipes", async (req, res) => {
   }
 });
 
-// 서버 실행
+// 에러 핸들링 미들웨어
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({
+    error: "서버 내부 오류가 발생했습니다.",
+    message: err.message
+  });
+});
+
+// 로컬 실행을 위한 Express 서버 시작
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });

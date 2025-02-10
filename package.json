@@ -1,0 +1,23 @@
+{
+  "name": "cook_it_project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/vision": "^4.3.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fast-levenshtein": "^3.0.0",
+    "firebase-functions": "^6.3.1",
+    "multer": "^1.4.5-lts.1",
+    "punycode": "^2.3.1",
+    "spellchecker": "^3.7.1",
+    "string-similarity": "^4.0.4"
+  }
+}

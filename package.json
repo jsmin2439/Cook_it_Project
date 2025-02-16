@@ -1,23 +1,25 @@
 {
-  "name": "cook_it_project",
+  "name": "chatgpt-firebase-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "cook_it_server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "description": "",
   "dependencies": {
+    "@google-cloud/storage": "^7.15.1",
     "@google-cloud/vision": "^4.3.2",
+    "body-parser": "^1.20.3",
+    "csv-parser": "^3.2.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "fast-levenshtein": "^3.0.0",
-    "firebase-functions": "^6.3.1",
+    "firebase-admin": "^13.0.2",
+    "formdata-node": "^6.0.3",
     "multer": "^1.4.5-lts.1",
-    "punycode": "^2.3.1",
-    "spellchecker": "^3.7.1",
-    "string-similarity": "^4.0.4"
+    "openai": "^4.77.3"
   }
 }

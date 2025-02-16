@@ -143,6 +143,6 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 
-chatgpt-firebase-server/.env
-chatgpt-firebase-server/serviceAccountKey.json
-chatgpt-firebase-server/vision-key.json
+.env
+serviceAccountKey.json
+vision-key.json

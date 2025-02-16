@@ -146,7 +146,3 @@ dist
 chatgpt-firebase-server/.env
 chatgpt-firebase-server/serviceAccountKey.json
 chatgpt-firebase-server/vision-key.json
-
-functions/.env
-functions/serviceAccountKey.json
-functions/vision-key.json

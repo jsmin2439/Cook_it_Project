@@ -5,6 +5,9 @@ const admin = require("firebase-admin");
 const { Storage } = require("@google-cloud/storage");
 const OpenAI = require("openai");
 const levenshtein = require("fast-levenshtein");
+const csv = require('csv-parser');
+const fs = require('fs');
+
 require("dotenv").config();
 
 // Firebase 서비스 계정 및 Vision API 키 파일 불러오기
@@ -88,6 +91,24 @@ function calculateMatchScore(userIngredients, recipeIngredients) {
   });
   return matchedCount / recipeIngredients.length;
 }
+
+let ingredientMap = {};
+
+// 3) 서버 구동 시(또는 필요한 시점)에 CSV 파일을 읽어
+//    영어 -> 한국어 매핑 데이터를 ingredientMap에 저장합니다.
+fs.createReadStream('mapped_ingredients_translated.csv')
+  .pipe(csv())
+  .on('data', (row) => {
+    // row.English가 존재하고, row.Korean이 존재할 때만
+    if (!row.English || !row.Korean) return;
+
+    // CSV에 "Apple", "APPLE", "apple"처럼 대소문자가 섞여 있어도
+    // 모두 소문자로 변환하여 key로 사용
+    ingredientMap[row.English.toLowerCase()] = row.Korean;
+  })
+  .on('end', () => {
+    console.log('CSV file successfully processed (ingredientMap 생성 완료)');
+  });
 
 // 사용자 식재료 저장 함수
 async function saveIngredients(userId, ingredients) {
@@ -240,15 +261,33 @@ app.post("/upload-ingredient", upload.single("image"), async (req, res) => {
 
     const [result] = await visionClient.labelDetection(`gs://${storageBucket}/${fileName}`);
     const labels = result.labelAnnotations;
+    // 🔹 기존 필터링 방식에서 맵핑 테이블을 이용한 필터링으로 수정
     const topLabel = labels
-        .filter((label) => label.score > 0.7 && label.description !== "Food")
+        .filter((label) => label.score > 0.7 && ingredientMap[label.description.toLowerCase()]) // 🔹 맵핑 테이블에 있는 항목만 필터링
         .sort((a, b) => b.score - a.score)[0];
 
     if (!topLabel) {
       return res.status(404).json({ error: "식재료를 인식하지 못했습니다." });
     }
-    await saveIngredients(userId, [topLabel.description]);
-    res.json({ success: true, detectedIngredient: topLabel.description });
+    // Vision API가 인식한 식재료 (영어) → 소문자 변환
+    const ingredientEnglish = topLabel.description.toLowerCase();
+
+    // 만약 매핑 테이블에 없는 식재료라면 에러 반환
+    if (!ingredientMap[ingredientEnglish]) {
+      return res.status(404).json({
+      error: "맵핑 테이블에 없는 식재료라 인식 결과를 출력할 수 없습니다.",
+      });
+    }
+
+    // 매핑 테이블에 있다면 한글 식재료명을 가져옴
+    const translatedIngredient = ingredientMap[ingredientEnglish];
+
+    // Firebase에 저장할 때는 한글 식재료 이름 사용
+    await saveIngredients(userId, [translatedIngredient]);
+
+    // 클라이언트로도 한글 식재료를 응답
+    res.json({ success: true, detectedIngredient: translatedIngredient });
+
   } catch (error) {
     console.error("Error processing image:", error);
     res.status(500).json({ error: "이미지 처리 중 오류가 발생했습니다." });

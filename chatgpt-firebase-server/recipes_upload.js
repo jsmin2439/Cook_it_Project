@@ -35,7 +35,7 @@ async function uploadRecipes(jsonFilePath, collectionName) {
 }
 
 // JSON 파일 경로와 Firestore 컬렉션 이름 설정
-const jsonFilePath = "./레시피1001~1136.json"; // 실제 파일 경로
+const jsonFilePath = "./recipes.json"; // 실제 파일 경로
 const collectionName = "recipes"; // Firestore 컬렉션 이름
 
 // 실행

@@ -6,7 +6,7 @@ import networkx as nx
 from konlpy.tag import Komoran, Okt, Kkma
 
 # JSON 파일 로드
-file_path = "total_recipes.json"  # 로컬에서 JSON 파일을 직접 지정
+file_path = "recipes.json"  # 로컬에서 JSON 파일을 직접 지정
 with open(file_path, "r", encoding="utf-8") as f:
     data = json.load(f)
 
@@ -75,7 +75,7 @@ df = pd.DataFrame({"레시피명": [recipe["RCP_NM"] for recipe in recipes],
                    "전처리된 식재료": recipe_ingredients})
 
 # 결과 CSV 파일로 저장
-df.to_csv("processed_ingredients.csv", index=False, encoding="utf-8-sig")
+df.to_csv("recipes_ingredients.csv", index=False, encoding="utf-8-sig")
 
 # 상위 10개 샘플 출력
 print(df.head(10))
@@ -91,4 +91,4 @@ for recipe in recipe_ingredients:
 # 결과를 데이터프레임으로 정리
 df_unique = pd.DataFrame({"식재료": list(unique_ingredients)})
 
-df_unique.to_csv("unique_ingredients.csv", index=False, encoding="utf-8-sig")
+df_unique.to_csv("ingredients.csv", index=False, encoding="utf-8-sig")

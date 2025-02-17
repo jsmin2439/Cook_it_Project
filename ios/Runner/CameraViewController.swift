@@ -318,6 +318,8 @@ extension CameraViewController: HandLandmarkerServiceLiveStreamDelegate {
   }
 }
 
+private let sessionQueue = DispatchQueue(label: "com.google.mediapipe.CameraFeedService.sessionQueue")
+
 // MARK: - Flutter MethodChannel Handler
 extension CameraViewController {
     // Flutter와 통신할 MethodChannel 설정

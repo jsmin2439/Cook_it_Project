@@ -92,23 +92,27 @@ function calculateMatchScore(userIngredients, recipeIngredients) {
   return matchedCount / recipeIngredients.length;
 }
 
-let ingredientMap = {};
+const ingredientMap = {};
 
-// 3) 서버 구동 시(또는 필요한 시점)에 CSV 파일을 읽어
-//    영어 -> 한국어 매핑 데이터를 ingredientMap에 저장합니다.
-fs.createReadStream('mapped_ingredients_translated.csv')
-  .pipe(csv())
-  .on('data', (row) => {
-    // row.English가 존재하고, row.Korean이 존재할 때만
-    if (!row.English || !row.Korean) return;
+// Firebase에서 ingredients 컬렉션을 읽어 ingredientMap 생성
+async function loadIngredientMap() {
+  try {
+    const snapshot = await db.collection('ingredients').get();
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.english && data.식재료) {
+        ingredientMap[data.english.toLowerCase()] = data.식재료;
+      }
+    });
+    console.log('Firebase data successfully loaded (ingredientMap 생성 완료)');
+  } catch (error) {
+    console.error('Error loading ingredientMap from Firebase:', error);
+  }
+}
 
-    // CSV에 "Apple", "APPLE", "apple"처럼 대소문자가 섞여 있어도
-    // 모두 소문자로 변환하여 key로 사용
-    ingredientMap[row.English.toLowerCase()] = row.Korean;
-  })
-  .on('end', () => {
-    console.log('CSV file successfully processed (ingredientMap 생성 완료)');
-  });
+// 서버 구동 시 Firebase에서 데이터 로드
+loadIngredientMap();
+
 
 // 사용자 식재료 저장 함수
 async function saveIngredients(userId, ingredients) {

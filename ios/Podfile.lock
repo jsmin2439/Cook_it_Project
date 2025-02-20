@@ -384,10 +384,11 @@ PODS:
 
 DEPENDENCIES:
   - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/ios`)
-  - Firebase/Analytics (= 11.8.0)
-  - Firebase/Auth (= 11.8.0)
-  - Firebase/Database (= 11.8.0)
-  - Firebase/Storage (= 11.8.0)
+  - Firebase/Analytics
+  - Firebase/Auth
+  - Firebase/Core
+  - Firebase/Database
+  - Firebase/Storage
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - Flutter (from `Flutter`)
@@ -590,6 +591,6 @@ SPEC CHECKSUMS:
   SSZipArchive: 8a6ee5677c8e304bebc109e39cf0da91ccef22ea
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
 
-PODFILE CHECKSUM: d0ec244ccc8da2e0380da28d5730115732d8e8fe
+PODFILE CHECKSUM: bf4442c29cf59974e83aba449fe965a78e22e7c0
 
 COCOAPODS: 1.16.2

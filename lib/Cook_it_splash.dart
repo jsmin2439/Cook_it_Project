@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mediapipe_2/login_screen.dart';
 import 'Cook_it_main.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -40,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen>
         Future.delayed(const Duration(milliseconds: 500), () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const MainScreen()),
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         });
       }

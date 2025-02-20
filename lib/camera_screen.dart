@@ -105,7 +105,7 @@ class _CameraScreenState extends State<CameraScreen> {
   /// 서버에 파일 업로드하는 예시 (MultipartRequest)
   Future<bool> _uploadToServer(String filePath) async {
     try {
-      final uri = Uri.parse("http://172.30.1.44:3000/api/upload-ingredient");
+      final uri = Uri.parse("http://172.30.1.26:3000/api/upload-ingredient");
       var request = http.MultipartRequest('POST', uri)
         ..fields['userId'] = "user123" // 예시
         ..files.add(await http.MultipartFile.fromPath('image', filePath));

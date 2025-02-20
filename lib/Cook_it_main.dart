@@ -9,6 +9,7 @@ import 'recipe_detail_page.dart';
 import 'book_page.dart';
 import 'heart_screen.dart';
 import 'survey_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // 기존 색상 팔레트
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 연한 베이지
@@ -19,7 +20,16 @@ const double kBorderRadius = 16.0; // 카드 라운딩
 
 /// 메인 화면
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final String idToken;
+  final String userId;
+  final String userEmail; // 이메일 필드 추가
+
+  const MainScreen({
+    Key? key,
+    required this.idToken,
+    required this.userId,
+    required this.userEmail, // 생성자에 이메일 파라미터 추가
+  }) : super(key: key);
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -48,11 +58,16 @@ class _MainScreenState extends State<MainScreen> {
       _isLoading = true;
     });
     try {
-      final uri = Uri.parse("http://172.30.1.44:3000/api/recommend-recipes");
+      final uri = Uri.parse("http://172.30.1.26:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"userId": "user123"}), // raw 데이터 예시
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${widget.idToken}" // 토큰 추가
+        },
+        body: jsonEncode({
+          "userId": widget.userId // 하드코딩된 user123 대신 실제 사용자 ID 사용
+        }),
       );
 
       if (response.statusCode == 200) {
@@ -72,6 +87,13 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  /// 로그아웃 처리
+  void _handleLogout() {
+    FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+        context, MaterialPageRoute(builder: (context) => const LoginScreen()));
   }
 
   /// BottomNavigationBar 탭 클릭 시
@@ -140,12 +162,26 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     const Spacer(),
                     // 알림 아이콘
+                    Text(
+                      "${widget.userEmail}님 환영합니다",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: kTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.notifications_none),
                       color: kTextColor,
                       onPressed: () {
                         // 알림 기능 등
                       },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout),
+                      color: Colors.red[300],
+                      onPressed: _handleLogout,
                     ),
                   ],
                 ),
@@ -201,27 +237,6 @@ class _MainScreenState extends State<MainScreen> {
 
               // -------------------- 5) 싫어하거나 피하고 싶은 재료가 있나요? --------------------
               _buildIngredientsCard(),
-
-              // 하단여백 (BottomNavigationBar 공간)
-              const SizedBox(height: 40),
-
-              // -------------------- 로그인 버튼 --------------------
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: _navigateToLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPinkButtonColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    '로그인 화면으로 이동',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

@@ -32,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final String? idToken = await userCredential.user?.getIdToken();
       if (idToken != null) {
         await _verifyLoginWithServer(idToken);
+        print("ID 토큰: $idToken");
       }
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _verifyLoginWithServer(String idToken) async {
     try {
       final response = await http.post(
-        Uri.parse("http://172.30.1.44:3000/api/verify-login"),
+        Uri.parse("http://172.30.1.26:3000/api/verify-login"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $idToken" // Bearer 토큰 추가
@@ -55,8 +56,16 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         print("서버 로그인 성공: ${response.body}");
         final responseData = jsonDecode(response.body);
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (context) => const MainScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MainScreen(
+              idToken: idToken,
+              userId: responseData['uid'], // 서버 응답에서 uid 추출
+              userEmail: _emailController.text.trim(),
+            ),
+          ),
+        );
       } else {
         print("서버 로그인 실패: ${response.body}");
       }

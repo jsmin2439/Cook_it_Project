@@ -3,34 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'my_fridge_page.dart';
 import 'search_screen.dart';
-import 'Cook_it_login.dart';
+import 'login_screen.dart';
 import 'Cook_it_splash.dart';
 import 'recipe_detail_page.dart';
 import 'book_page.dart';
+import 'heart_screen.dart';
+import 'survey_screen.dart';
 
 // 기존 색상 팔레트
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 연한 베이지
-const Color kCardColor = Color(0xFFFFECD0);       // 더 진한 베이지
+const Color kCardColor = Color(0xFFFFECD0); // 더 진한 베이지
 const Color kPinkButtonColor = Color(0xFFFFC7B9); // 연핑크
-const Color kTextColor = Colors.black87;          // 문구 색
-const double kBorderRadius = 16.0;                // 카드 라운딩
-
-void main() {
-  runApp(const MyApp());
-}
-
-/// 앱 시작점
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: SplashScreen(),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
+const Color kTextColor = Colors.black87; // 문구 색
+const double kBorderRadius = 16.0; // 카드 라운딩
 
 /// 메인 화면
 class MainScreen extends StatefulWidget {
@@ -63,7 +48,7 @@ class _MainScreenState extends State<MainScreen> {
       _isLoading = true;
     });
     try {
-      final uri = Uri.parse("http://192.168.23.108:3000/recommend-recipes");
+      final uri = Uri.parse("http://172.30.1.44:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
         headers: {"Content-Type": "application/json"},
@@ -102,13 +87,21 @@ class _MainScreenState extends State<MainScreen> {
         MaterialPageRoute(builder: (context) => const SearchScreen()),
       );
     }
+
+    // 🔹 Heart 버튼을 클릭하면 `HeartScreen`으로 이동
+    if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const HeartScreen()),
+      );
+    }
   }
 
   /// 로그인 페이지 이동
   void _navigateToLogin() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const CookItLogin()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
@@ -117,120 +110,121 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: kBackgroundColor,
       body: SafeArea(
-        child: SingleChildScrollView( 
-        child: Column(
-          children: [
-            // -------------------- 상단 영역 (Cook it 로고 + 알림아이콘) --------------------
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  // Cook it 로고
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/images/cookie.png', // 쿠키 로고
-                        width: 50,
-                        height: 50,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Cook it',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: kTextColor,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // -------------------- 상단 영역 (Cook it 로고 + 알림아이콘) --------------------
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    // Cook it 로고
+                    Row(
+                      children: [
+                        Image.asset(
+                          'assets/images/cookie.png', // 쿠키 로고
+                          width: 50,
+                          height: 50,
                         ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Cook it',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: kTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // 알림 아이콘
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none),
+                      color: kTextColor,
+                      onPressed: () {
+                        // 알림 기능 등
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // 구분선
+              Container(height: 1, color: Colors.black26),
+
+              // (검색바는 제거함)
+
+              const SizedBox(height: 8),
+
+              // -------------------- 중간: '나만의 냉장고' + 'AI 레시피' (같은 높이) --------------------
+              /// 두 위젯의 높이를 동일하게 맞추기 위해 Row 안에 Expanded 위젯을 사용하고,
+              /// 내부에서 높이를 고정 혹은 Expanded 처리
+              SizedBox(
+                height: 220, // 예: 높이를 고정해서 두 카드가 동일한 높이가 되도록
+                child: Row(
+                  children: [
+                    // 나만의 냉장고
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildMyFridgeCard(),
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  // 알림 아이콘
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none),
-                    color: kTextColor,
-                    onPressed: () {
-                      // 알림 기능 등
-                    },
-                  ),
-                ],
-              ),
-            ),
-            // 구분선
-            Container(height: 1, color: Colors.black26),
-
-            // (검색바는 제거함)
-
-            const SizedBox(height: 8),
-
-            // -------------------- 중간: '나만의 냉장고' + 'AI 레시피' (같은 높이) --------------------
-            /// 두 위젯의 높이를 동일하게 맞추기 위해 Row 안에 Expanded 위젯을 사용하고,
-            /// 내부에서 높이를 고정 혹은 Expanded 처리
-            SizedBox(
-              height: 220, // 예: 높이를 고정해서 두 카드가 동일한 높이가 되도록
-              child: Row(
-                children: [
-                  // 나만의 냉장고
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildMyFridgeCard(),
                     ),
-                  ),
-                  // AI 레시피
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _buildAiRecipeCard(),
+                    // AI 레시피
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: _buildAiRecipeCard(),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 구분선
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              height: 1,
-              color: Colors.black26,
-            ),
-
-            // -------------------- 3) 나의 식습관 좌표 FMBT --------------------
-             _buildTasteLabCard(),
-
-            // 구분선
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              height: 1,
-              color: Colors.black26,
-            ),
-
-            // -------------------- 5) 싫어하거나 피하고 싶은 재료가 있나요? --------------------
-            _buildIngredientsCard(),
-
-            // 하단여백 (BottomNavigationBar 공간)
-            const SizedBox(height: 40),
-
-            // -------------------- 로그인 버튼 --------------------
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton(
-                onPressed: _navigateToLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPinkButtonColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  '로그인 화면으로 이동',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              // 구분선
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                height: 1,
+                color: Colors.black26,
+              ),
+
+              // -------------------- 3) 나의 식습관 좌표 FMBT --------------------
+              _buildTasteLabCard(),
+
+              // 구분선
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                height: 1,
+                color: Colors.black26,
+              ),
+
+              // -------------------- 5) 싫어하거나 피하고 싶은 재료가 있나요? --------------------
+              _buildIngredientsCard(),
+
+              // 하단여백 (BottomNavigationBar 공간)
+              const SizedBox(height: 40),
+
+              // -------------------- 로그인 버튼 --------------------
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: _navigateToLogin,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPinkButtonColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '로그인 화면으로 이동',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
 
       // -------------------- 하단 네비게이션 바 --------------------
@@ -291,7 +285,8 @@ class _MainScreenState extends State<MainScreen> {
           // 아이콘 + 타이틀 한 줄
           Row(
             children: [
-              const Icon(Icons.kitchen_outlined, size: 28, color: Colors.black87),
+              const Icon(Icons.kitchen_outlined,
+                  size: 28, color: Colors.black87),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -346,7 +341,8 @@ class _MainScreenState extends State<MainScreen> {
             Text(
               "내 취향에 맞는\nAI 레시피",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kTextColor),
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold, color: kTextColor),
             ),
             const SizedBox(height: 8),
 
@@ -395,15 +391,15 @@ class _MainScreenState extends State<MainScreen> {
   /// AI 레시피 개별 아이템 (이미지 + 이름)
   Widget _buildRecipeItem(dynamic recipe) {
     final String imageUrl = recipe["ATT_FILE_NO_MAIN"] ?? ""; // 대표 이미지
-    final String recipeName = recipe["RCP_NM"] ?? "No Name";  // 레시피명
+    final String recipeName = recipe["RCP_NM"] ?? "No Name"; // 레시피명
 
     return GestureDetector(
       onTap: () {
-        // 탭하면 RecipeDetailPage로 이동
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RecipeDetailPage(recipeData: recipe),
+            builder: (context) =>
+                RecipeDetailPage(recipeData: recipe), // ✅ 레시피 데이터 전달
           ),
         );
       },
@@ -451,118 +447,125 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   /// "나만의 입맛 분석소" 큰 박스 위젯
-/// "나만의 입맛 분석소" 큰 박스 위젯
-Widget _buildTasteLabCard() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-    child: Container(
+  Widget _buildTasteLabCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 252, 240, 162),
+          borderRadius: BorderRadius.circular(kBorderRadius),
+          border: Border.all(color: Colors.black87),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(16), // 내부 여백 추가
+        child: Column(
+          children: [
+            // 📌 제목 (나만의 입맛 분석소)
+            Text(
+              "나만의 입맛 분석소",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: kTextColor,
+              ),
+            ),
+            const SizedBox(height: 12), // 제목과 카드 사이 간격
+
+            // 📌 두 개의 위젯을 같은 너비로 정렬 + 간격 추가
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // "나의 식습관 좌표 FMBT"
+                Expanded(
+                  child: _buildCard(
+                    title: "나의 식습관 좌표 FMBT",
+                    buttonText: "검사하기",
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const SurveyScreen()),
+                      );
+                    },
+                    backgroundColor:
+                        kPinkButtonColor.withOpacity(0.8), // 카드 색 강조
+                    isSmall: true, // 크기 줄이기
+                  ),
+                ),
+                const SizedBox(width: 12), // 👉 위젯 사이 간격 추가
+                // "취향 탐구 시작!!"
+                Expanded(
+                  child: _buildCard(
+                    title: "맛 취향 분석",
+                    buttonText: "검사하기",
+                    onPressed: () {},
+                    backgroundColor:
+                        kPinkButtonColor.withOpacity(0.8), // 연핑크 강조
+                    isSmall: true, // 크기 줄이기
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 카드 위젯 수정 (배경색 추가)
+  /// 카드 위젯 (작은 크기 조절 가능)
+  Widget _buildCard({
+    required String title,
+    required String buttonText,
+    required VoidCallback onPressed,
+    Color? backgroundColor,
+    bool isSmall = false,
+  }) {
+    return Container(
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 252, 240, 162),
+        color: backgroundColor ?? kCardColor, // 기본 색상 유지
         borderRadius: BorderRadius.circular(kBorderRadius),
         border: Border.all(color: Colors.black87),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 6,
-            offset: Offset(0, 3),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.all(16), // 내부 여백 추가
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 8 : 12,
+        vertical: isSmall ? 10 : 12,
+      ),
       child: Column(
         children: [
-          // 📌 제목 (나만의 입맛 분석소)
           Text(
-            "나만의 입맛 분석소",
+            title,
+            textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isSmall ? 14 : 16,
               fontWeight: FontWeight.bold,
-              color: kTextColor,
             ),
           ),
-          const SizedBox(height: 12), // 제목과 카드 사이 간격
-
-          // 📌 두 개의 위젯을 같은 너비로 정렬 + 간격 추가
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // "나의 식습관 좌표 FMBT"
-              Expanded(
-                child: _buildCard(
-                  title: "나의 식습관 좌표 FMBT",
-                  buttonText: "검사하기",
-                  onPressed: () {},
-                  backgroundColor: kPinkButtonColor.withOpacity(0.8), // 카드 색 강조
-                  isSmall: true, // 크기 줄이기
-                ),
+          const SizedBox(height: 8), // 버튼과의 간격 조정
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(197, 170, 10, 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              const SizedBox(width: 12), // 👉 위젯 사이 간격 추가
-              // "취향 탐구 시작!!"
-              Expanded(
-                child: _buildCard(
-                  title: "맛 취향 분석",
-                  buttonText: "검사하기",
-                  onPressed: () {},
-                  backgroundColor: kPinkButtonColor.withOpacity(0.8), // 연핑크 강조
-                  isSmall: true, // 크기 줄이기
-                ),
-              ),
-            ],
+            ),
+            onPressed: onPressed,
+            child: Text(
+              buttonText,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
-          const SizedBox(height: 12),
         ],
       ),
-    ),
-  );
-}
-
-/// 카드 위젯 수정 (배경색 추가)
-/// 카드 위젯 (작은 크기 조절 가능)
-Widget _buildCard({
-  required String title,
-  required String buttonText,
-  required VoidCallback onPressed,
-  Color? backgroundColor,
-  bool isSmall = false, 
-}) {
-  return Container(
-    decoration: BoxDecoration(
-      color: backgroundColor ?? kCardColor, // 기본 색상 유지
-      borderRadius: BorderRadius.circular(kBorderRadius),
-      border: Border.all(color: Colors.black87),
-    ),
-    padding: EdgeInsets.symmetric(
-      horizontal: isSmall ? 8 : 12, 
-      vertical: isSmall ? 10 : 12,
-    ),
-    child: Column(
-      children: [
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: isSmall ? 14 : 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8), // 버튼과의 간격 조정
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color.fromARGB(197, 170, 10, 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          onPressed: onPressed,
-          child: Text(
-            buttonText,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
   /// "싫어하거나 피하고 싶은 재료가 있나요?" 카드 (5번)
   Widget _buildIngredientsCard() {

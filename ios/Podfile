@@ -1,5 +1,6 @@
 # Uncomment the next line to define a global platform for your project
 platform :ios, '16.0'
+use_frameworks! :linkage => :static # ✅ Firebase와 충돌 방지
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -34,11 +35,10 @@ target 'Runner' do
     # ---- 불필요한 수동 pod 지정은 모두 제거 ----
     pod 'MediaPipeTasksVision'            # 필요한 경우만 유지
     # Firebase를 사용하고 있다면 추가
-pod 'Firebase/Core'
-pod 'Firebase/Auth'
-pod 'Firebase/Database'
-pod 'Firebase/Storage'
-pod 'Firebase/Analytics'
+    pod 'Firebase/Auth', '11.8.0'
+    pod 'Firebase/Database', '11.8.0'
+    pod 'Firebase/Storage', '11.8.0'
+    pod 'Firebase/Analytics', '11.8.0'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 

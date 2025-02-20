@@ -15,7 +15,7 @@ class _CameraScreenState extends State<CameraScreen> {
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
 
-  bool _isUploading = false;    // 업로드 중 상태 표시
+  bool _isUploading = false; // 업로드 중 상태 표시
   bool _isFlashEffectVisible = false; // 화면 깜빡임 효과 플래그
 
   @override
@@ -105,7 +105,7 @@ class _CameraScreenState extends State<CameraScreen> {
   /// 서버에 파일 업로드하는 예시 (MultipartRequest)
   Future<bool> _uploadToServer(String filePath) async {
     try {
-      final uri = Uri.parse("http://192.168.23.108:3000/upload-ingredient");
+      final uri = Uri.parse("http://172.30.1.44:3000/api/upload-ingredient");
       var request = http.MultipartRequest('POST', uri)
         ..fields['userId'] = "user123" // 예시
         ..files.add(await http.MultipartFile.fromPath('image', filePath));

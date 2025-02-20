@@ -6,6 +6,8 @@
 	<string>26293531066-6ineug4m8alfetiffttbbmde7ihubnp1.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
 	<string>com.googleusercontent.apps.26293531066-6ineug4m8alfetiffttbbmde7ihubnp1</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>26293531066-1v85pas0ti250j6g8mpgd2monbbhc960.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyA8vjkVFgGxNO6UNtgATa6dfHwpcOCLgcU</string>
 	<key>GCM_SENDER_ID</key>
@@ -29,7 +31,7 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:26293531066:ios:7c0a78e1045b964884ad83</string>
+	<string>1:26293531066:ios:7e054dcfd70d828884ad83</string>
 	<key>DATABASE_URL</key>
 	<string>https://cook-it-project-dee30-default-rtdb.asia-southeast1.firebasedatabase.app</string>
 </dict>

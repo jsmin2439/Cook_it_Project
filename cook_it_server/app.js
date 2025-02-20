@@ -14,17 +14,23 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // CORS 미들웨어
+// server.js
 app.use((req, res, next) => {
-    res.set("Access-Control-Allow-Origin", "*");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    );
+    res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS"
+    );
 
-    if (req.method === "OPTIONS") {
-        res.set("Access-Control-Max-Age", "3600");
-        return res.status(204).send(""); // OPTIONS 요청은 204 응답 후 종료
-    } else {
-        next(); // 다음 미들웨어로 넘어가기
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
+
+    next();
 });
 
 // 라우터 설정

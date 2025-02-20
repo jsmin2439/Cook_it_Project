@@ -2,8 +2,9 @@ const express = require("express");
 const multer = require("multer");
 const { getBucket, initializeFirebase, loadIngredientMap, saveIngredients, getUserIngredients, findTopRecipes } = require("./firebase");
 const { recommendTop3Recipes } = require("./openai");
-const { getVisionClient } = require("./vision");
+const { getVisionClient, detectIngredientLabels } = require("./vision");
 const { authMiddleware } = require('./auth');
+const { verifyLogin } = require('./auth');
 
 const router = express.Router();
 
@@ -36,64 +37,46 @@ router.post("/upload-ingredient", authMiddleware, upload.single("image"), async 
     let fileName = '';
     // userId를 토큰에서 가져옴
     const userId = req.user.uid;
+
+    // 30초 타임아웃 설정
+    const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('이미지 처리 시간이 초과되었습니다.')), 30000)
+    );
+
     try {
-        const bucket = getBucket();
-        if (!bucket) {
-            throw new Error('Firebase Storage가 초기화되지 않았습니다.');
-        }
+        const imageProcessing = (async () => {
+            const bucket = getBucket();
+            if (!bucket) {
+                throw new Error('Firebase Storage가 초기화되지 않았습니다.');
+            }
 
-        if (!bucket.name) {
-            throw new Error('Storage bucket 이름이 유효하지 않습니다.');
-        }
+            if (!req.file || !req.file.buffer) {
+                return res.status(400).json({error: "이미지가 필요합니다."});
+            }
 
-        const visionClient = getVisionClient();
+            fileName = `ingredients/${Date.now()}-${req.file.originalname}`;
+            const file = bucket.file(fileName);
 
-        if (!req.file || !req.file.buffer) {
-            return res.status(400).json({ error: "이미지가 필요합니다." });
-        }
-
-        const userId = req.body.userId || "default";
-        const fileName = `ingredients/${Date.now()}-${req.file.originalname}`;
-        const file = bucket.file(fileName);
-
-        await file.save(req.file.buffer, {
-            metadata: { contentType: req.file.mimetype },
-        });
-
-        // Vision API 호출 전에 업로드 완료 대기
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const [result] = await visionClient.labelDetection(`gs://${bucket.name}/${fileName}`);
-        const labels = result.labelAnnotations;
-
-        // 🔹 기존 필터링 방식에서 맵핑 테이블을 이용한 필터링으로 수정
-        const topLabel = labels
-            .filter((label) => label.score > 0.7 && ingredientMap[label.description.toLowerCase()]) // 🔹 맵핑 테이블에 있는 항목만 필터링
-            .sort((a, b) => b.score - a.score)[0];
-
-        if (!topLabel) {
-            return res.status(404).json({ error: "식재료를 인식하지 못했습니다." });
-        }
-        // Vision API가 인식한 식재료 (영어) → 소문자 변환
-        const ingredientEnglish = topLabel.description.toLowerCase();
-
-        // 만약 매핑 테이블에 없는 식재료라면 에러 반환
-        if (!ingredientMap[ingredientEnglish]) {
-            // 매핑 실패 시에도 이미지 삭제
-            await deleteImageAfterAnalysis(bucket, fileName);
-            return res.status(404).json({
-                error: "맵핑 테이블에 없는 식재료라 인식 결과를 출력할 수 없습니다.",
+            await file.save(req.file.buffer, {
+                metadata: {contentType: req.file.mimetype},
             });
-        }
 
-        // 매핑 테이블에 있다면 한글 식재료명을 가져옴
-        const translatedIngredient = ingredientMap[ingredientEnglish];
+            // Vision API 호출 전에 업로드 완료 대기
+            await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Firebase에 저장할 때는 한글 식재료 이름 사용
-        await saveIngredients(userId, [translatedIngredient]);
+            // 매핑 테이블에 있다면 한글 식재료명을 가져옴
+            const translatedIngredient = await detectIngredientLabels(fileName, ingredientMap);
 
-        // 이미지 분석이 완료되면 삭제
-        await deleteImageAfterAnalysis(bucket, fileName);
+            // Firebase에 저장할 때는 한글 식재료 이름 사용
+            await saveIngredients(userId, [translatedIngredient]);
+
+            // 이미지 분석이 완료되면 삭제
+            await deleteImageAfterAnalysis(bucket, fileName);
+
+            return translatedIngredient;
+        })();
+
+        const translatedIngredient = await Promise.race([imageProcessing, timeout]);
 
         // 클라이언트로도 한글 식재료를 응답
         res.json({ success: true, detectedIngredient: translatedIngredient });
@@ -104,22 +87,20 @@ router.post("/upload-ingredient", authMiddleware, upload.single("image"), async 
         // 에러 발생 시에도 이미지 삭제 시도
         if (fileName) {
             const bucket = getBucket();
-            await deleteImageAfterAnalysis(bucket, fileName);
+            await deleteImageAfterAnalysis(bucket, fileName).catch(console.error);
         }
+        // 상세 에러 메시지 숨기기
         res.status(500).json({ error: "이미지 처리 중 오류가 발생했습니다." });
     }
 });
 
 // 레시피 추천 라우트
 router.post("/recommend-recipes", authMiddleware,async (req, res) => {
-    // userId를 토큰에서 가져옴
-    const userId = req.user.uid;
     try {
-        const { userId } = req.body;
-        if (!userId) {
-            return res.status(400).json({ error: "사용자 ID가 필요합니다." });
-        }
+        // userId를 토큰에서 가져옴
+        const userId = req.user.uid;
         const userIngredients = await getUserIngredients(userId);
+
         if (!userIngredients || userIngredients.length === 0) {
             return res.status(404).json({ error: "등록된 식재료가 없습니다." });
         }
@@ -190,6 +171,7 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
         });
     } catch (error) {
         console.error("레시피 추천 오류:", error);
+        // 상세 에러 메시지 숨기기
         res.status(500).json({ error: "레시피 추천 중 오류가 발생했습니다." });
     }
 });
@@ -220,4 +202,5 @@ async function initializeRoutes() {
     }
 }
 
+initializeRoutes().catch(console.error);
 module.exports = router;  // router 객체만 내보내기

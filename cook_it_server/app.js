@@ -3,6 +3,7 @@ const routes = require("./routes");
 const { initializeFirebase } = require("./firebase");
 const { initializeOpenAI } = require("./openai");
 const { initializeVision } = require("./vision");
+const { authMiddleware } = require('./auth');
 
 require("dotenv").config();
 
@@ -14,15 +15,22 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // CORS 미들웨어
 app.use((req, res, next) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+
     if (req.method === "OPTIONS") {
-        res.set("Access-Control-Allow-Methods", "GET, POST");
-        res.set("Access-Control-Allow-Headers", "Content-Type");
         res.set("Access-Control-Max-Age", "3600");
-        res.status(204).send("");
+        return res.status(204).send(""); // OPTIONS 요청은 204 응답 후 종료
     } else {
-        next();
+        next(); // 다음 미들웨어로 넘어가기
     }
 });
+
+// 라우터 설정
+app.use("/verify-login", routes); // 인증 없이 접근 가능한 로그인 라우트
+app.use("/api", authMiddleware); // 인증이 필요한 라우트에만 미들웨어 적용
+app.use("/api", routes);
 
 // 헬스 체크 라우트
 app.get("/", (req, res) => {
@@ -45,7 +53,6 @@ async function startServer() {
         await initializeVision();
         console.log('Vision initialized');
 
-        app.use("/", routes);
         isServerInitialized = true;
 
         const PORT = process.env.PORT || 3000;

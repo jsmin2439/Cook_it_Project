@@ -3,6 +3,7 @@ const multer = require("multer");
 const { getBucket, initializeFirebase, loadIngredientMap, saveIngredients, getUserIngredients, findTopRecipes } = require("./firebase");
 const { recommendTop3Recipes } = require("./openai");
 const { getVisionClient } = require("./vision");
+const { authMiddleware } = require('./auth');
 
 const router = express.Router();
 
@@ -31,8 +32,10 @@ async function deleteImageAfterAnalysis(bucket, fileName) {
 }
 
 // 이미지 업로드 및 Vision API 분석 라우트
-router.post("/upload-ingredient", upload.single("image"), async (req, res) => {
+router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
     let fileName = '';
+    // userId를 토큰에서 가져옴
+    const userId = req.user.uid;
     try {
         const bucket = getBucket();
         if (!bucket) {
@@ -108,7 +111,9 @@ router.post("/upload-ingredient", upload.single("image"), async (req, res) => {
 });
 
 // 레시피 추천 라우트
-router.post("/recommend-recipes", async (req, res) => {
+router.post("/recommend-recipes", authMiddleware,async (req, res) => {
+    // userId를 토큰에서 가져옴
+    const userId = req.user.uid;
     try {
         const { userId } = req.body;
         if (!userId) {
@@ -186,6 +191,22 @@ router.post("/recommend-recipes", async (req, res) => {
     } catch (error) {
         console.error("레시피 추천 오류:", error);
         res.status(500).json({ error: "레시피 추천 중 오류가 발생했습니다." });
+    }
+});
+
+// 로그인 검증 라우트 추가
+router.post("/verify-login", async (req, res) => {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+        return res.status(400).json({ error: '토큰이 필요합니다.' });
+    }
+
+    const result = await verifyLogin(idToken);
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(401).json(result);
     }
 });
 

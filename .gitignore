@@ -77,7 +77,7 @@ web_modules/
 .yarn-integrity
 
 # dotenv environment variable files
-.env
+cook_it_server/.env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -143,6 +143,5 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/node
 
-.env
-serviceAccountKey.json
-vision-key.json
+cook_it_server/serviceAccountKey.json
+cook_it_server/vision-key.json

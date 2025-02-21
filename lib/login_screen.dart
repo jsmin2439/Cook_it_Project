@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _verifyLoginWithServer(String idToken) async {
     try {
       final response = await http.post(
-        Uri.parse("http://172.30.1.26:3000/api/verify-login"),
+        Uri.parse("http://192.168.0.254:3000/api/verify-login"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $idToken" // Bearer 토큰 추가

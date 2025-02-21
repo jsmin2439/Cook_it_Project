@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'colors.dart';
+
+const Color kBackgroundColor = Color(0xFFFFF8EC);
 
 class BookPage extends StatefulWidget {
   final Map<String, dynamic>? recipeData; // 레시피 데이터를 받아옴 (null 가능성 대비)
@@ -16,7 +19,8 @@ class _BookPageState extends State<BookPage> {
   bool _isCameraActive = false; // 카메라 상태 추적
 
   static const _cameraChannel = MethodChannel('com.example.mediapipe2/camera');
-  static const _gestureChannel = MethodChannel('com.example.mediapipe2/gesture');
+  static const _gestureChannel =
+      MethodChannel('com.example.mediapipe2/gesture');
 
   List<Map<String, String>> steps = [];
 
@@ -44,12 +48,12 @@ class _BookPageState extends State<BookPage> {
 
   Future<void> _stopCamera() async {
     try {
-        await _cameraChannel.invokeMethod('stopCamera');
-        setState(() => _isCameraActive = false);
+      await _cameraChannel.invokeMethod('stopCamera');
+      setState(() => _isCameraActive = false);
     } on PlatformException catch (e) {
-        debugPrint("Camera Stop Error: ${e.message}");
+      debugPrint("Camera Stop Error: ${e.message}");
     }
-}
+  }
 
   void _toggleCamera() async {
     if (_isCameraActive) {
@@ -64,7 +68,8 @@ class _BookPageState extends State<BookPage> {
       if (!_isCameraActive) return; // 카메라 비활성화 시 제스처 무시
       if (call.method == 'swipe') {
         final direction = call.arguments as String;
-        if (direction == 'left') _nextPage();
+        if (direction == 'left')
+          _nextPage();
         else if (direction == 'right') _prevPage();
       }
     });
@@ -125,35 +130,134 @@ class _BookPageState extends State<BookPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (steps.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text("Recipe Book"),
-          actions: [_buildCameraToggle()], // 카메라 토글 버튼 추가
+    return Scaffold(
+      backgroundColor: kBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 2,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
-        body: const Center(child: Text("조리 단계가 없습니다.")),
+        title: Row(
+          children: [
+            Image.asset('assets/images/cookbook.png', width: 32, height: 32),
+            const SizedBox(width: 8),
+            Text(
+              widget.recipeData?["RCP_NM"] ?? "조리 단계북",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+        actions: [_buildCameraToggle()],
+      ),
+      body: _buildBookContent(),
+    );
+  }
+
+  Widget _buildBookContent() {
+    if (steps.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.menu_book, size: 60, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              "등록된 조리 단계가 없습니다",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text("Recipe Book"),
-        actions: [_buildCameraToggle()], // 카메라 토글 버튼 추가
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _pageController,
+          itemCount: _getTotalPages(),
+          itemBuilder: (context, index) {
+            return _buildRecipeBookPage(index);
+          },
+        ),
+        Positioned(
+          bottom: 20,
+          left: 0,
+          right: 0,
+          child: _buildProgressIndicator(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepItem(Map<String, String> step, int stepNumber) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: kCardColor,
+        borderRadius: BorderRadius.circular(12),
       ),
-      body: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 80,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _getTotalPages(),
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                return _buildRecipeBookPage(index);
-              },
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: "Step $stepNumber\n",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  TextSpan(
+                    text: step["text"] ?? "",
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
             ),
           ),
+          if (step["img"]?.isNotEmpty ?? false)
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+              child: Image.network(
+                step["img"]!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image, size: 50),
+                  );
+                },
+              ),
+            ),
         ],
       ),
     );
@@ -171,7 +275,6 @@ class _BookPageState extends State<BookPage> {
     final int startIndex = pageIndex * 2;
     final int endIndex = startIndex + 2;
     bool isLastPage = (pageIndex == _getTotalPages() - 1);
-
 
     List<Map<String, String>> pageSteps = steps.sublist(
       startIndex,
@@ -205,12 +308,11 @@ class _BookPageState extends State<BookPage> {
                 ),
                 isLastPage
                     ? ElevatedButton(
-              onPressed: () {
-                _stopCamera(); // 카메라 종료 추가
-                Navigator.popUntil(context, (route) => route.isFirst);
-              },
-              child: const Text("홈으로 돌아가기")
-              )
+                        onPressed: () {
+                          _stopCamera(); // 카메라 종료 추가
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        },
+                        child: const Text("홈으로 돌아가기"))
                     : ElevatedButton(
                         onPressed: _nextPage,
                         child: const Text("다음 단계"),
@@ -223,40 +325,61 @@ class _BookPageState extends State<BookPage> {
     );
   }
 
-
-  /// 각 단계별 위젯
-  Widget _buildStepItem(Map<String, String> step, int stepNumber) {
-    final text = step["text"] ?? "";
-    final imgUrl = step["img"] ?? "";
-
+  Widget _buildNavigationControls(bool isLastPage) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("STEP $stepNumber", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          if (imgUrl.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                imgUrl,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 150,
-                    color: Colors.grey[300],
-                    alignment: Alignment.center,
-                    child: const Text("No Image"),
-                  );
-                },
+          FloatingActionButton(
+            heroTag: 'prev',
+            backgroundColor: kPinkButtonColor,
+            onPressed: _prevPage,
+            child: const Icon(Icons.arrow_back, color: Colors.white),
+          ),
+          if (isLastPage)
+            ElevatedButton.icon(
+              icon: const Icon(Icons.home, size: 20),
+              label: const Text("홈으로"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPinkButtonColor,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
+              onPressed: () {
+                _stopCamera();
+                Navigator.popUntil(context, (route) => route.isFirst);
+              },
+            )
+          else
+            FloatingActionButton(
+              heroTag: 'next',
+              backgroundColor: kPinkButtonColor,
+              onPressed: _nextPage,
+              child: const Icon(Icons.arrow_forward, color: Colors.white),
             ),
-          const SizedBox(height: 8),
-          Text(text, style: const TextStyle(fontSize: 16)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        _getTotalPages(),
+        (index) => Container(
+          width: 10,
+          height: 10,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: index == _currentPage ? kPinkButtonColor : Colors.grey[300],
+          ),
+        ),
       ),
     );
   }

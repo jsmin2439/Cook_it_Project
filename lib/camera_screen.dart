@@ -5,7 +5,14 @@ import 'dart:io';
 import 'dart:convert';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({Key? key}) : super(key: key);
+  final String userId; // 추가
+  final String idToken; // 추가
+
+  const CameraScreen({
+    Key? key,
+    required this.userId, // 추가
+    required this.idToken, // 추가
+  }) : super(key: key);
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -105,9 +112,10 @@ class _CameraScreenState extends State<CameraScreen> {
   /// 서버에 파일 업로드하는 예시 (MultipartRequest)
   Future<bool> _uploadToServer(String filePath) async {
     try {
-      final uri = Uri.parse("http://172.30.1.26:3000/api/upload-ingredient");
+      final uri = Uri.parse("http://192.168.0.254:3000/api/upload-ingredient");
       var request = http.MultipartRequest('POST', uri)
-        ..fields['userId'] = "user123" // 예시
+        ..fields['userId'] = widget.userId // widget.userId 사용
+        ..headers['Authorization'] = 'Bearer ${widget.idToken}' // 토큰 추가
         ..files.add(await http.MultipartFile.fromPath('image', filePath));
 
       final response = await request.send();

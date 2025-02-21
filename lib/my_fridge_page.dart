@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/animation.dart';
 import 'colors.dart';
@@ -5,13 +6,18 @@ import 'camera_screen.dart';
 import 'add_ingredient_page.dart';
 
 class MyFridgePage extends StatefulWidget {
-  const MyFridgePage({Key? key}) : super(key: key);
+  final String userId; // userId 파라미터 추가
+  final String idToken; // 추가
+
+  const MyFridgePage({Key? key, required this.userId, required this.idToken})
+      : super(key: key);
 
   @override
   State<MyFridgePage> createState() => _MyFridgePageState();
 }
 
-class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderStateMixin {
+class _MyFridgePageState extends State<MyFridgePage>
+    with SingleTickerProviderStateMixin {
   List<String> _ingredients = [];
   bool _isDeleteMode = false;
   late AnimationController _shakeController;
@@ -21,43 +27,111 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
     super.initState();
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
-      vsync: this, // ✅ SingleTickerProviderStateMixin을 추가했으므로 정상 작동
+      vsync: this,
     )..repeat(reverse: true);
+
+    _loadUserIngredients();
   }
 
+  Future<void> _loadUserIngredients() async {
+    try {
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('user')
+          .doc(widget.userId)
+          .get();
+
+      if (docSnapshot.exists) {
+        List<dynamic> ingredients = docSnapshot['ingredients'] ?? [];
+        setState(() {
+          _ingredients = List<String>.from(Set<String>.from(ingredients));
+        });
+      }
+    } catch (e) {
+      debugPrint("Firestore에서 데이터를 불러오는 중 오류 발생: $e");
+    }
+  }
+
+  /// **Firestore에서 `ingredients` 배열 필드에 새로운 재료 추가**
+  Future<void> _addIngredientToFirestore(List<String> ingredients) async {
+    DocumentReference userDoc =
+        FirebaseFirestore.instance.collection('user').doc(widget.userId);
+
+    try {
+      await userDoc.update({
+        "ingredients": FieldValue.arrayUnion(ingredients) // ✅ 한 번에 여러 개 추가
+      }).catchError((error) async {
+        // 문서가 없으면 새로 생성
+        await userDoc.set({
+          "ingredients": ingredients // ✅ 최초 저장 시 배열 전체 추가
+        });
+      });
+
+      // ✅ Firestore 저장 후 UI 업데이트
+      _loadUserIngredients();
+    } catch (e) {
+      debugPrint("재료 추가 오류: $e");
+    }
+  }
+
+  /// **Firestore에서 `ingredients` 배열에서 특정 재료 삭제**
+  /// **Firestore에서 `ingredients` 배열에서 특정 재료 삭제**
+  Future<void> _removeIngredientFromFirestore(String ingredient) async {
+    DocumentReference userDoc =
+        FirebaseFirestore.instance.collection('user').doc(widget.userId);
+
+    await userDoc.update({
+      "ingredients": FieldValue.arrayRemove([ingredient]) // 배열에서 삭제
+    });
+  }
+
+  /// **📌 사진을 이용한 재료 추가**
   Future<void> _addIngredientByPhoto() async {
     final detectedIngredient = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CameraScreen()),
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(
+          userId: widget.userId, // userId 전달
+          idToken: widget.idToken, // idToken 전달
+        ),
+      ),
     );
+
     if (detectedIngredient != null && detectedIngredient is String) {
-      setState(() {
-        _ingredients.add(detectedIngredient);
-      });
+      if (!_ingredients.contains(detectedIngredient)) {
+        setState(() {
+          _ingredients.add(detectedIngredient);
+        });
+        await _addIngredientToFirestore([detectedIngredient]); // ✅ 리스트로 변환하여 전달
+      }
     }
   }
 
-  /// 📌 재료 추가 페이지로 이동
+  /// **📌 재료 추가 페이지 이동**
   Future<void> _goToAddIngredientPage() async {
     final List<String>? selectedItems = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const AddIngredientPage()),
+      MaterialPageRoute(
+        builder: (_) => AddIngredientPage(
+          currentFridgeIngredients: List.from(_ingredients),
+        ),
+      ),
     );
+
     if (selectedItems != null && selectedItems.isNotEmpty) {
-      setState(() {
-        _ingredients.addAll(selectedItems);
-      });
+      await _addIngredientToFirestore(selectedItems);
     }
   }
 
-  /// 📌 개별 재료 삭제 (삭제 버튼 클릭 시)
+  /// **📌 개별 재료 삭제**
   void _deleteIngredient(String ingredient) {
     setState(() {
       _ingredients.remove(ingredient);
     });
+
+    _removeIngredientFromFirestore(ingredient);
   }
 
-  /// 📌 전체 삭제 확인 다이얼로그
+  /// **📌 전체 삭제 확인 다이얼로그**
   void _confirmDeleteAllIngredients() {
     showDialog(
       context: context,
@@ -65,9 +139,15 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
         title: const Text("전체 삭제"),
         content: const Text("정말 모든 재료를 삭제하시겠어요?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("취소")),
           TextButton(
-            onPressed: () {
+            onPressed: () => Navigator.pop(context),
+            child: const Text("취소"),
+          ),
+          TextButton(
+            onPressed: () async {
+              for (String ingredient in _ingredients) {
+                await _removeIngredientFromFirestore(ingredient);
+              }
               setState(() {
                 _ingredients.clear();
                 _isDeleteMode = false;
@@ -81,12 +161,14 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
     );
   }
 
-  /// 📌 재료 아이템 UI (삭제 모드 시 애니메이션 적용)
+  /// **📌 재료 아이템 UI (삭제 버튼 포함, 삭제 모드일 때 흔들리는 애니메이션 적용)**
   Widget _buildIngredientItem(String ingredient, int index) {
     return AnimatedBuilder(
       animation: _isDeleteMode ? _shakeController : AlwaysStoppedAnimation(0),
       builder: (context, child) {
-        final angle = _isDeleteMode ? _shakeController.value * 0.1 * (index.isEven ? 1 : -1) : 0.0;
+        final angle = _isDeleteMode
+            ? _shakeController.value * 0.1 * (index.isEven ? 1 : -1)
+            : 0.0;
         return Transform.rotate(
           angle: angle,
           child: child,
@@ -111,12 +193,19 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
         child: Chip(
           label: Text(
             ingredient,
-            style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          deleteIcon: const Icon(Icons.close, size: 18),
+          deleteIcon: _isDeleteMode
+              ? const Icon(Icons.close, size: 18, color: Colors.redAccent)
+              : null,
           onDeleted: _isDeleteMode ? () => _deleteIngredient(ingredient) : null,
           backgroundColor: Colors.transparent,
-          shape: StadiumBorder(side: BorderSide(color: kPinkButtonColor.withOpacity(0.3))),
+          shape: StadiumBorder(
+            side: BorderSide(color: kPinkButtonColor.withOpacity(0.3)),
+          ),
         ),
       ),
     );
@@ -136,38 +225,43 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
             ),
           ),
         ),
-        title: Column(
-          children: [
-            const Text(
-              "나만의 냉장고",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                shadows: [
-                  Shadow(color: Colors.black26, blurRadius: 2, offset: Offset(1, 1)),
-                ],
-              ),
-            ),
-            if (_isDeleteMode)
-              const Text(
-                "삭제할 재료를 선택해주세요",
-                style: TextStyle(fontSize: 12, color: Colors.white70),
-              ),
-          ],
+        title: const Text(
+          "나만의 냉장고",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
         ),
         actions: [
           IconButton(
-            icon: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: _isDeleteMode
-                  ? const Icon(Icons.delete_forever, key: Key('delete'))
-                  : const Icon(Icons.delete_outline, key: Key('no-delete')),
-            ),
+            icon: _isDeleteMode
+                ? const Icon(Icons.delete_forever, color: Colors.white)
+                : const Icon(Icons.delete_outline, color: Colors.white),
             onPressed: () {
-              setState(() => _isDeleteMode = !_isDeleteMode);
+              setState(() {
+                if (_isDeleteMode) {
+                  _shakeController
+                      .animateTo(0.0, duration: Duration(milliseconds: 200))
+                      .then((_) {
+                    setState(() {
+                      _isDeleteMode = false;
+                    });
+                  });
+                } else {
+                  _isDeleteMode = true;
+                  _shakeController.repeat(reverse: true);
+                }
+              });
             },
           ),
+          if (_isDeleteMode) // ✅ 삭제 모드일 때만 보이도록 함
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: Colors.white),
+              onPressed: () {
+                _confirmDeleteAllIngredients();
+              },
+            ),
         ],
       ),
       body: Padding(
@@ -179,60 +273,53 @@ class _MyFridgePageState extends State<MyFridgePage> with SingleTickerProviderSt
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Image.asset('assets/images/empty_fridge.png', width: 200),
+                        // 기존 Hero 위젯 제거
+                        Image.asset(
+                          'assets/images/empty_fridge.png',
+                          width: 200,
+                        ),
                         const SizedBox(height: 20),
                         Text(
                           "냉장고가 비었어요!",
-                          style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                          style: TextStyle(
+                              fontSize: 18, color: Colors.grey.shade600),
                         ),
-                        const SizedBox(height: 10),
-                        const Text("아래 버튼을 눌러 재료를 추가해보세요", style: TextStyle(color: Colors.grey)),
                       ],
                     )
                   : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         childAspectRatio: 2.5,
                         mainAxisSpacing: 12,
                         crossAxisSpacing: 12,
                       ),
                       itemCount: _ingredients.length,
-                      itemBuilder: (context, index) => _buildIngredientItem(_ingredients[index], index),
+                      itemBuilder: (context, index) =>
+                          _buildIngredientItem(_ingredients[index], index),
                     ),
             ),
             const SizedBox(height: 24),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 FloatingActionButton.extended(
-                  heroTag: 'camera',
-                  icon: const Icon(Icons.camera_alt, color: Colors.white),
+                  icon: const Icon(Icons.camera_alt),
                   label: const Text("사진 추가"),
                   backgroundColor: kPinkButtonColor,
                   onPressed: _addIngredientByPhoto,
-                  elevation: 4,
                 ),
                 FloatingActionButton.extended(
-                  heroTag: 'add',
-                  icon: const Icon(Icons.add_circle, color: Colors.white),
-                  label: const Text("직접 추가"),
+                  icon: const Icon(Icons.add_circle),
+                  label: const Text("재료 추가"),
                   backgroundColor: Colors.orangeAccent,
                   onPressed: _goToAddIngredientPage,
-                  elevation: 4,
                 ),
               ],
             ),
           ],
         ),
       ),
-      floatingActionButton: _ingredients.isNotEmpty && !_isDeleteMode
-          ? FloatingActionButton(
-              child: const Icon(Icons.delete_sweep),
-              backgroundColor: Colors.redAccent,
-              onPressed: _confirmDeleteAllIngredients,
-            )
-          : null,
     );
   }
 

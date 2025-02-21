@@ -4,12 +4,11 @@ import 'package:http/http.dart' as http;
 import 'my_fridge_page.dart';
 import 'search_screen.dart';
 import 'login_screen.dart';
-import 'Cook_it_splash.dart';
 import 'recipe_detail_page.dart';
-import 'book_page.dart';
 import 'heart_screen.dart';
 import 'survey_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // 기존 색상 팔레트
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 연한 베이지
@@ -58,7 +57,7 @@ class _MainScreenState extends State<MainScreen> {
       _isLoading = true;
     });
     try {
-      final uri = Uri.parse("http://172.30.1.26:3000/api/recommend-recipes");
+      final uri = Uri.parse("http://192.168.0.254:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
         headers: {
@@ -66,7 +65,7 @@ class _MainScreenState extends State<MainScreen> {
           "Authorization": "Bearer ${widget.idToken}" // 토큰 추가
         },
         body: jsonEncode({
-          "userId": widget.userId // 하드코딩된 user123 대신 실제 사용자 ID 사용
+          "userId": widget.userId //실제 사용자 ID 사용
         }),
       );
 
@@ -119,14 +118,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  /// 로그인 페이지 이동
-  void _navigateToLogin() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,15 +153,6 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                     const Spacer(),
                     // 알림 아이콘
-                    Text(
-                      "${widget.userEmail}님 환영합니다",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: kTextColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.notifications_none),
                       color: kTextColor,
@@ -186,6 +168,20 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 ),
               ),
+              Container(height: 1, color: Colors.black26),
+
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Text(
+                  "${widget.userEmail}님 환영합니다",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: kTextColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               // 구분선
               Container(height: 1, color: Colors.black26),
 
@@ -196,26 +192,27 @@ class _MainScreenState extends State<MainScreen> {
               // -------------------- 중간: '나만의 냉장고' + 'AI 레시피' (같은 높이) --------------------
               /// 두 위젯의 높이를 동일하게 맞추기 위해 Row 안에 Expanded 위젯을 사용하고,
               /// 내부에서 높이를 고정 혹은 Expanded 처리
-              SizedBox(
-                height: 220, // 예: 높이를 고정해서 두 카드가 동일한 높이가 되도록
-                child: Row(
-                  children: [
-                    // 나만의 냉장고
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _buildMyFridgeCard(),
-                      ),
+              Column(
+                children: [
+                  // "나만의 냉장고" (크기 증가)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SizedBox(
+                      height: 240, // ✅ 크기 증가
+                      child: _buildMyFridgeCard(),
                     ),
-                    // AI 레시피
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _buildAiRecipeCard(),
-                      ),
+                  ),
+                  // "AI 레시피" (크기 증가)
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: SizedBox(
+                      height: 240, // ✅ 크기 증가
+                      child: _buildAiRecipeCard(),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
 
               // 구분선
@@ -284,6 +281,7 @@ class _MainScreenState extends State<MainScreen> {
   //--------------------------------------------------------------------------
 
   /// "나만의 냉장고" 카드
+  /// "나만의 냉장고" 카드
   Widget _buildMyFridgeCard() {
     return Container(
       decoration: BoxDecoration(
@@ -293,46 +291,113 @@ class _MainScreenState extends State<MainScreen> {
       ),
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        // 가운데 정렬 or 시작 정렬 선택 가능
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 아이콘 + 타이틀 한 줄
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.kitchen_outlined,
-                  size: 28, color: Colors.black87),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  "나만의 냉장고",
-                  style: TextStyle(
-                    fontSize: 16, // 글자 크기 조금 조정
-                    fontWeight: FontWeight.bold,
-                    color: kTextColor,
+              Row(
+                children: [
+                  const Icon(Icons.kitchen_outlined,
+                      size: 28, color: Colors.black87),
+                  const SizedBox(width: 8),
+                  Text(
+                    "나만의 냉장고",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: kTextColor,
+                    ),
                   ),
-                ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // 냉장고 재료 미리보기
+              FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection('user')
+                    .doc(widget.userId)
+                    .get(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData ||
+                      !snapshot.data!.exists ||
+                      (snapshot.data!['ingredients'] as List).isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        "재료를 추가해보세요!",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    );
+                  }
+
+                  List<String> ingredients =
+                      List<String>.from(snapshot.data!['ingredients'])
+                          .take(10) // 최대 10개만 표시
+                          .toList();
+
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...ingredients.map((ingredient) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: kPinkButtonColor.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: kPinkButtonColor.withOpacity(0.5),
+                              ),
+                            ),
+                            child: Text(
+                              ingredient,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          )),
+                      if ((snapshot.data!['ingredients'] as List).length > 10)
+                        Text(
+                          "+ ${(snapshot.data!['ingredients'] as List).length - 10}개 더 보기",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // 상세 안내 (필요하다면)
-          Text(
-            "재료 추가 및 삭제",
-            style: TextStyle(fontSize: 14, color: kTextColor),
-          ),
-          const SizedBox(height: 12),
-          // 버튼
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.arrow_forward, size: 18),
+              label: const Text("관리하기"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPinkButtonColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MyFridgePage()),
+                  MaterialPageRoute(
+                    builder: (context) => MyFridgePage(
+                        userId: widget.userId, idToken: widget.idToken),
+                  ),
                 );
               },
-              child: const Text("바로가기"),
             ),
           ),
         ],
@@ -349,46 +414,62 @@ class _MainScreenState extends State<MainScreen> {
         border: Border.all(color: Colors.black87),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(6.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const SizedBox(height: 4),
-            Text(
-              "내 취향에 맞는\nAI 레시피",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: kTextColor),
-            ),
-            const SizedBox(height: 8),
-
-            // 로딩 상태 표시
-            if (_isLoading)
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_recommendedRecipes.isEmpty)
-              const Expanded(
-                child: Center(child: Text("추천 레시피가 없습니다.")),
-              )
-            else
-              // PageView (슬라이드)
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  children: _recommendedRecipes.map((recipe) {
-                    return _buildRecipeItem(recipe);
-                  }).toList(),
+            Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Image.asset(
+                      'assets/images/cookbook.png',
+                      width: 28,
+                      height: 28,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "AI 맞춤 레시피",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kTextColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _fetchRecommendedRecipes,
+                      color: Colors.black54,
+                      tooltip: '새로고침',
+                    ),
+                  ],
                 ),
-              ),
-
+              ],
+            ),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _recommendedRecipes.isEmpty
+                      ? const Center(child: Text("추천 레시피가 없습니다."))
+                      : PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            // 페이지 변경 시 콜백 추가
+                            setState(() {
+                              _currentPage = index;
+                            });
+                          },
+                          itemCount: _recommendedRecipes.length,
+                          itemBuilder: (context, index) {
+                            final recipe = _recommendedRecipes[index];
+                            return _buildRecipeItem(recipe);
+                          },
+                        ),
+            ),
             if (!_isLoading && _recommendedRecipes.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                padding: const EdgeInsets.only(top: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -405,45 +486,53 @@ class _MainScreenState extends State<MainScreen> {
 
   /// AI 레시피 개별 아이템 (이미지 + 이름)
   Widget _buildRecipeItem(dynamic recipe) {
-    final String imageUrl = recipe["ATT_FILE_NO_MAIN"] ?? ""; // 대표 이미지
-    final String recipeName = recipe["RCP_NM"] ?? "No Name"; // 레시피명
+    final String imageUrl = recipe["ATT_FILE_NO_MAIN"] ?? "";
+    final String recipeName = recipe["RCP_NM"] ?? "No Name";
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                RecipeDetailPage(recipeData: recipe), // ✅ 레시피 데이터 전달
+            builder: (context) => RecipeDetailPage(
+              recipeData: recipe,
+              userId: widget.userId, // 추가
+            ),
           ),
         );
       },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 대표 이미지
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              imageUrl,
-              width: 120,
-              height: 80,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 120,
-                  height: 80,
-                  color: Colors.grey,
-                  alignment: Alignment.center,
-                  child: const Text("No Image"),
-                );
-              },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: double.infinity,
+              height: 128, // 이미지 높이 고정
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                image: DecorationImage(
+                  image: NetworkImage(imageUrl),
+                  fit: BoxFit.fitWidth,
+                ),
+              ),
+              child: imageUrl.isEmpty
+                  ? const Center(child: Text("No Image"))
+                  : null,
             ),
-          ),
-          const SizedBox(height: 8),
-          // 레시피 이름
-          Text(recipeName, style: const TextStyle(fontSize: 14)),
-        ],
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                recipeName,
+                style: const TextStyle(fontSize: 14),
+                maxLines: 2, // 최대 2줄 제한
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

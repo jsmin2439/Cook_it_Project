@@ -57,13 +57,30 @@ async function loadIngredientMap() {
     return ingredientMap;
 }
 
-// 사용자 식재료 저장 함수
-async function saveIngredients(userId, ingredients) {
+// 사용자 식재료 저장 함수 (기존 데이터에 추가)
+async function saveIngredients(userId, newIngredients) {
     const userRef = db.collection("user_ingredients").doc(userId);
     try {
-        await userRef.set({ ingredients }, { merge: true });
+        // 트랜잭션으로 안전하게 데이터 업데이트
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(userRef);
+            let currentIngredients = [];
+
+            // 기존 데이터가 있으면 가져오기
+            if (doc.exists) {
+                currentIngredients = doc.data().ingredients || [];
+            }
+
+            // 중복 제거하면서 새로운 재료 추가
+            const updatedIngredients = [...new Set([...currentIngredients, ...newIngredients])];
+
+            // 데이터 업데이트
+            transaction.set(userRef, { ingredients: updatedIngredients }, { merge: true });
+        });
+
+        console.log("식재료가 성공적으로 추가되었습니다.");
     } catch (error) {
-        console.error("Error saving ingredients:", error);
+        console.error("식재료 저장 중 오류:", error);
         throw error;
     }
 }

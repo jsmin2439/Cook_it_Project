@@ -101,11 +101,19 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
         const userId = req.user.uid;
         const userIngredients = await getUserIngredients(userId);
 
-        if (!userIngredients || userIngredients.length === 0) {
+
+        if (!userIngredients || !userIngredients.ingredients || userIngredients.ingredients.length === 0) {
             return res.status(404).json({ error: "등록된 식재료가 없습니다." });
         }
         const topRecipes = await findTopRecipes(userIngredients);
+        if (!topRecipes || topRecipes.length === 0) {
+            return res.status(404).json({ error: "매칭되는 레시피가 없습니다." });
+        }
+
         const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes);
+        if (!recommendedRecipes || recommendedRecipes.length === 0) {
+            return res.status(404).json({ error: "추천 레시피를 찾을 수 없습니다." });
+        }
 
         res.json({
             success: true,

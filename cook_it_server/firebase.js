@@ -59,7 +59,7 @@ async function loadIngredientMap() {
 
 // 사용자 식재료 저장 함수 (기존 데이터에 추가)
 async function saveIngredients(userId, newIngredients) {
-    const userRef = db.collection("user_ingredients").doc(userId);
+    const userRef = db.collection("user").doc(userId);
     try {
         // 트랜잭션으로 안전하게 데이터 업데이트
         await db.runTransaction(async (transaction) => {
@@ -88,13 +88,24 @@ async function saveIngredients(userId, newIngredients) {
 // 사용자 식재료 가져오기 함수
 async function getUserIngredients(userId) {
     try {
-        const userRef = db.collection("user_ingredients").doc(userId);
+        const userRef = db.collection("user").doc(userId);
         const userDoc = await userRef.get();
+
         if (!userDoc.exists) {
-            console.log("사용자 식재료가 없습니다.");
-            return [];
+            return {
+                ingredients: [],
+                disliked_ingredients: [],
+                allergic_ingredients: []
+            };
         }
-        return userDoc.data().ingredients || [];
+
+        const userData = userDoc.data();
+        return {
+            ingredients: userData.ingredients || [],
+            disliked_ingredients: userData.disliked_ingredients || [],
+            allergic_ingredients: userData.allergic_ingredients || []
+        };
+
     } catch (error) {
         console.error("사용자 식재료 가져오기 오류:", error);
         throw error;
@@ -104,15 +115,26 @@ async function getUserIngredients(userId) {
 
 // 레시피 데이터 검색 및 매칭도 계산 함수
 async function findTopRecipes(userIngredients) {
+    if (!userIngredients || !userIngredients.ingredients) {
+        throw new Error("유효하지 않은 사용자 식재료 데이터입니다.");
+    }
+
+    if (!Array.isArray(userIngredients.ingredients)) {
+        throw new Error("ingredients는 배열이어야 합니다.");
+    }
+
     try {
         const recipesSnapshot = await db.collection("recipes").get();
+        if (recipesSnapshot.empty) {
+            throw new Error("레시피 데이터가 없습니다.");
+        }
         const recipes = recipesSnapshot.docs.map((doc) => {
             const data = doc.data();
             // 재료 목록에서 공백 제거 및 소문자 처리
             const ingredients = data.RCP_PARTS_DTLS.split(",").map((ingredient) =>
                 ingredient.trim().toLowerCase()
             );
-            const correctedUserIngredients = userIngredients.map((ing) =>
+            const correctedUserIngredients = userIngredients.ingredients.map((ing) =>
                 ing.toLowerCase()
             );
             const matchScore = calculateMatchScore(correctedUserIngredients, ingredients);

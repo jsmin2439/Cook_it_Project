@@ -13,18 +13,33 @@ function initializeOpenAI() {
 
 // GPT-4를 사용하여 최종 레시피 3개 추천 함수
 async function recommendTop3Recipes(userIngredients, topRecipes) {
+    if (!userIngredients || !userIngredients.ingredients || !topRecipes) {
+        throw new Error('유효하지 않은 입력 데이터입니다.');
+    }
     const db = getDb();  // db 객체 가져오기
     if (!db) {
         throw new Error('Firebase가 초기화되지 않았습니다.');
     }
     try {
+        const { ingredients, disliked_ingredients, allergic_ingredients } = userIngredients;
+
         const simplifiedRecipes = topRecipes.map((recipe) => ({
             id: recipe.id,
             name: recipe.name,
             matchScore: recipe.matchScore,
             matchedIngredients: recipe.ingredients.filter((ingredient) =>
-                userIngredients.some((userIngredient) =>
+                ingredients.some((userIngredient) =>
                     ingredient.includes(userIngredient.toLowerCase())
+                )
+            ),
+            containsDisliked: recipe.ingredients.some(ingredient =>
+                disliked_ingredients.some(disliked =>
+                    ingredient.includes(disliked.toLowerCase())
+                )
+            ),
+            containsAllergic: recipe.ingredients.some(ingredient =>
+                allergic_ingredients.some(allergic =>
+                    ingredient.includes(allergic.toLowerCase())
                 )
             ),
             category: recipe.category,
@@ -36,20 +51,27 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
                 {
                     role: "system",
                     content:
-                        "상위 50개 레시피 중에서 재료 매칭도를 우선적으로 고려하고, 카테고리 다양성을 판단하여 최적의 3개 레시피를 추천하세요.",
+                        "상위 50개 레시피 중에서 다음 기준으로 최적의 3개 레시피를 추천하세요:\n" +
+                        "1. 알레르기 식재료가 포함된 레시피는 제외\n" +
+                        "2. 싫어하는 식재료가 포함된 레시피는 가능한 제외\n" +
+                        "3. 재료 매칭도를 우선적으로 고려\n" +
+                        "4. 카테고리 다양성 고려"
                 },
                 {
                     role: "user",
                     content: `
-식재료: ${userIngredients.join(", ")}
+                    사용자 선호도:
+                    - 보유 식재료: ${ingredients.join(", ")}
+                    - 싫어하는 식재료: ${disliked_ingredients.join(", ")}
+                    - 알레르기 식재료: ${allergic_ingredients.join(", ")}
 
-레시피 목록:
-${JSON.stringify(simplifiedRecipes, null, 1)}
+                    레시피 목록:
+                    ${JSON.stringify(simplifiedRecipes, null, 1)}
 
-다음 형식으로 응답해주세요:
-{
-  "recommendedRecipes": ["레시피ID1", "레시피ID2", "레시피ID3"]
-}`,
+                    다음 형식으로 응답해주세요:
+                    {
+                        "recommendedRecipes": ["레시피ID1", "레시피ID2", "레시피ID3"]
+                    }`,
                 },
             ],
             temperature: 0.7,

@@ -1,8 +1,8 @@
 const express = require("express");
-const routes = require("./routes");
+const { router, initializeRoutes } = require("./routes");
 const { initializeFirebase } = require("./firebase");
 const { initializeOpenAI } = require("./openai");
-const { initializeVision } = require("./vision");
+//const { initializeVision } = require("./vision");
 const { authMiddleware } = require('./auth');
 
 require("dotenv").config();
@@ -13,30 +13,29 @@ const app = express();
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// CORS 미들웨어
-// server.js
+const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
+console.log('FastAPI URL:', FASTAPI_URL);
+
+// CORS 설정 수정:
 app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN);
     res.header(
         "Access-Control-Allow-Headers",
         "Origin, X-Requested-With, Content-Type, Accept, Authorization"
     );
-    res.header(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS"
-    );
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.header("Access-Control-Allow-Credentials", "true");
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
-
     next();
 });
 
 // 라우터 설정
-app.use("/verify-login", routes); // 인증 없이 접근 가능한 로그인 라우트
-app.use("/api", authMiddleware); // 인증이 필요한 라우트에만 미들웨어 적용
-app.use("/api", routes);
+app.use("/verify-login", router);
+app.use("/api", authMiddleware);
+app.use("/api", router);
 
 // 헬스 체크 라우트
 app.get("/", (req, res) => {
@@ -45,25 +44,34 @@ app.get("/", (req, res) => {
 
 let isServerInitialized = false;
 
+// 에러 처리 미들웨어 (라우터 설정 후에 추가)
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        error: "서버 오류가 발생했습니다.",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
+
 // 서버 초기화 및 시작
 async function startServer() {
-    if (isServerInitialized) return;
-
     try {
-        const { db, bucket } = await initializeFirebase();
-        console.log('Firebase initialized with bucket:', bucket.name);
-
+        await initializeFirebase();
         await initializeOpenAI();
-        console.log('OpenAI initialized');
+        await initializeRoutes();
 
-        await initializeVision();
-        console.log('Vision initialized');
-
-        isServerInitialized = true;
+        //await initializeVision();
+        //console.log('Vision initialized');
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, () => {
             console.log(`Server is running on port ${PORT}`);
+        }).on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                console.error(`Port ${PORT} is already in use`);
+                process.exit(1);
+            }
+            throw error;
         });
     } catch (error) {
         console.error('Initialization error:', error);

@@ -1,4 +1,4 @@
-const vision = require("@google-cloud/vision");
+/*const vision = require("@google-cloud/vision");
 const { getBucket } = require("./firebase");
 
 let visionClient;
@@ -57,4 +57,4 @@ module.exports = {
     initializeVision,
     getVisionClient,
     detectIngredientLabels,
-};
+};*/

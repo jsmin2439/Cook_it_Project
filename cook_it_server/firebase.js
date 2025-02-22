@@ -42,19 +42,36 @@ function initializeFirebase() {
 
 // Firebase에서 ingredients 컬렉션을 읽어 ingredientMap 생성
 async function loadIngredientMap() {
-    const ingredientMap = {};
     try {
+        if (!admin.apps.length) {
+            throw new Error('Firebase가 초기화되지 않았습니다');
+        }
+
+        const db = admin.firestore();
+        console.log('Firestore 연결 확인...');
+
         const snapshot = await db.collection('ingredients').get();
+        console.log('컬렉션 데이터 조회:', snapshot.size, '개의 문서');
+
+        const ingredientMap = {};
         snapshot.forEach((doc) => {
             const data = doc.data();
+
+            // english 필드를 class ID로 사용
             if (data.english && data.식재료) {
-                ingredientMap[data.english.toLowerCase()] = data.식재료;
+                ingredientMap[data.english] = data.식재료;
             }
         });
+
+        if (Object.keys(ingredientMap).length === 0) {
+            throw new Error('ingredientMap이 비어있습니다');
+        }
+
+        return ingredientMap;
     } catch (error) {
-        console.error('Error loading ingredientMap from Firebase:', error);
+        console.error('ingredientMap 로드 오류:', error);
+        throw new Error('ingredientMap 로드 실패');
     }
-    return ingredientMap;
 }
 
 // 사용자 식재료 저장 함수 (기존 데이터에 추가)

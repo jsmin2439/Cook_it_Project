@@ -2,9 +2,13 @@ const express = require("express");
 const multer = require("multer");
 const { getBucket, initializeFirebase, loadIngredientMap, saveIngredients, getUserIngredients, findTopRecipes } = require("./firebase");
 const { recommendTop3Recipes } = require("./openai");
-const { getVisionClient, detectIngredientLabels } = require("./vision");
+//const { getVisionClient, detectIngredientLabels } = require("./vision");
 const { authMiddleware } = require('./auth');
 const { verifyLogin } = require('./auth');
+const axios = require('axios');
+const FormData = require('form-data');
+const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
+
 
 const router = express.Router();
 
@@ -16,12 +20,12 @@ const upload = multer({
 
 let ingredientMap = {};
 
-initializeFirebase();  // 먼저 Firebase 초기화
-loadIngredientMap().then(map => {
-    ingredientMap = map;
-});
+//initializeFirebase();  // 먼저 Firebase 초기화
+//loadIngredientMap().then(map => {
+    //ingredientMap = map;
+//});
 
-async function deleteImageAfterAnalysis(bucket, fileName) {
+/*async function deleteImageAfterAnalysis(bucket, fileName) {
     try {
         // 이미지 삭제 전 약간의 대기 시간 설정 (Vision API 처리 완료 보장)
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -31,9 +35,10 @@ async function deleteImageAfterAnalysis(bucket, fileName) {
         console.error(`Error deleting image ${fileName}:`, error);
     }
 }
+*/
 
 // 이미지 업로드 및 Vision API 분석 라우트
-router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
+/*router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
     let fileName = '';
     // userId를 토큰에서 가져옴
     const userId = req.user.uid;
@@ -91,6 +96,69 @@ router.post("/upload-ingredient", authMiddleware, upload.single("image"), async 
         }
         // 상세 에러 메시지 숨기기
         res.status(500).json({ error: "이미지 처리 중 오류가 발생했습니다." });
+    }
+});
+*/
+
+// 식재료 등록 라우트
+router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
+    const userId = req.user.uid;
+
+    try {
+        const imageProcessing = async () => {
+            if (!req.file || !req.file.buffer) {
+                return res.status(400).json({error: "이미지가 필요합니다."});
+            }
+
+            const formData = new FormData();
+            formData.append('file', req.file.buffer, {
+                filename: req.file.originalname,
+                contentType: req.file.mimetype
+            });
+
+            const response = await axios.post(`${FASTAPI_URL}/detect/`, formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.data.success) {
+                throw new Error('식재료 인식 실패');
+            }
+
+            // 중복 제거된 한글 식재료명 목록 생성
+            const uniqueIngredients = [...new Set(
+                response.data.detections
+                    .map(detection => ingredientMap[detection.class_name])
+                    .filter(name => name)  // undefined나 null 제거
+            )];
+
+            if (uniqueIngredients.length === 0) {
+                throw new Error('인식된 식재료가 없습니다.');
+            }
+
+            return uniqueIngredients;
+        };
+
+        const detectedIngredients = await Promise.race([
+            imageProcessing(),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('이미지 처리 시간이 초과되었습니다.')), 30000)
+            )
+        ]);
+
+        res.json({
+            success: true,
+            detectedIngredients: detectedIngredients,
+            message: '식재료가 성공적으로 저장되었습니다.'
+        });
+
+    } catch (error) {
+        console.error("이미지 처리 오류:", error);
+        res.status(error.response?.status || 500).json({
+            error: error.message || "이미지 처리 중 오류가 발생했습니다."
+        });
     }
 });
 
@@ -201,14 +269,34 @@ router.post("/verify-login", async (req, res) => {
 });
 
 // ingredientMap 초기화는 서버 시작 후에 수행
+let isRoutesInitialized = false;
+
 async function initializeRoutes() {
+    if (isRoutesInitialized) {
+        return;
+    }
+
     try {
+        console.log('라우트 초기화 시작...');
+        const { db } = await initializeFirebase();
+
+        if (!db) {
+            throw new Error('Firestore 초기화 실패');
+        }
+
+        console.log('ingredientMap 로드 시작...');
         ingredientMap = await loadIngredientMap();
-        console.log('IngredientMap loaded successfully');
+        console.log('ingredientMap 로드 완료');
+
+        isRoutesInitialized = true;
     } catch (error) {
         console.error('Error loading ingredientMap:', error);
+        throw error;
     }
 }
 
-initializeRoutes().catch(console.error);
-module.exports = router;  // router 객체만 내보내기
+//initializeRoutes().catch(console.error);
+module.exports = {
+    router,
+    initializeRoutes
+};

@@ -48,6 +48,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    print("사용자 ID 토큰: ${widget.idToken}");
     _fetchRecommendedRecipes();
   }
 

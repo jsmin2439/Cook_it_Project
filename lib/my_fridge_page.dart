@@ -84,24 +84,23 @@ class _MyFridgePageState extends State<MyFridgePage>
     });
   }
 
-  /// **📌 사진을 이용한 재료 추가**
+  /// **📌 사진을 이용한 재료 추가 (데이터 동기화 강화)**
   Future<void> _addIngredientByPhoto() async {
-    final detectedIngredient = await Navigator.push(
+    final detectedIngredients = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CameraScreen(
-          userId: widget.userId, // userId 전달
-          idToken: widget.idToken, // idToken 전달
+          userId: widget.userId,
+          idToken: widget.idToken,
         ),
       ),
     );
 
-    if (detectedIngredient != null && detectedIngredient is String) {
-      if (!_ingredients.contains(detectedIngredient)) {
-        setState(() {
-          _ingredients.add(detectedIngredient);
-        });
-        await _addIngredientToFirestore([detectedIngredient]); // ✅ 리스트로 변환하여 전달
+    if (detectedIngredients != null && detectedIngredients is List<String>) {
+      if (detectedIngredients.isNotEmpty) {
+        await _addIngredientToFirestore(detectedIngredients);
+        await _loadUserIngredients(); // ✅ await 추가로 동기화 보장
+        setState(() {}); // ✅ UI 강제 갱신
       }
     }
   }

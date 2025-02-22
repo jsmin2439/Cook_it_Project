@@ -5,35 +5,26 @@ const serviceAccount = require("./serviceAccountKey.json");
 require('dotenv').config();  // .env 파일 사용
 
 let db;
-let bucket;
 let isInitialized = false;
 
 // Firebase Admin 초기화
 function initializeFirebase() {
     if (isInitialized) {
-        return { db, bucket };
+        return { db };
     }
 
     try {
         if (!admin.apps.length) {
             admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-                storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+                credential: admin.credential.cert(serviceAccount)
             });
         }
 
         db = admin.firestore();  // 초기화 후 설정
-        bucket = admin.storage().bucket();
-
-        // bucket이 제대로 초기화되었는지 확인
-        if (!bucket) {
-            throw new Error('Storage bucket 초기화 실패');
-        }
         console.log("Firebase initialized successfully");
-        console.log("Storage bucket initialized:", bucket.name);
 
         isInitialized = true;
-        return { db, bucket };
+        return { db };
     } catch (error) {
         console.error("Error initializing Firebase:", error);
         throw error;
@@ -182,9 +173,7 @@ async function findTopRecipes(userIngredients) {
 module.exports = {
     initializeFirebase,
     getDb: () => db,
-    getBucket: () => bucket,
     loadIngredientMap,
-    saveIngredients,
     getUserIngredients,
     findTopRecipes
 };

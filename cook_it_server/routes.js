@@ -1,10 +1,10 @@
 const express = require("express");
 const multer = require("multer");
-const { getBucket, initializeFirebase, loadIngredientMap, saveIngredients, getUserIngredients, findTopRecipes } = require("./firebase");
+const { initializeFirebase, loadIngredientMap, getUserIngredients, findTopRecipes } = require("./firebase");
 const { recommendTop3Recipes } = require("./openai");
-//const { getVisionClient, detectIngredientLabels } = require("./vision");
 const { authMiddleware } = require('./auth');
 const { verifyLogin } = require('./auth');
+const { calculateMatchScore, getQuestionsAndResponses, calculateFMBT, saveFMBTResult } = require("./utils");
 const axios = require('axios');
 const FormData = require('form-data');
 const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
@@ -19,86 +19,6 @@ const upload = multer({
 });
 
 let ingredientMap = {};
-
-//initializeFirebase();  // 먼저 Firebase 초기화
-//loadIngredientMap().then(map => {
-    //ingredientMap = map;
-//});
-
-/*async function deleteImageAfterAnalysis(bucket, fileName) {
-    try {
-        // 이미지 삭제 전 약간의 대기 시간 설정 (Vision API 처리 완료 보장)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        await bucket.file(fileName).delete();
-        console.log(`Deleted temporary image: ${fileName}`);
-    } catch (error) {
-        console.error(`Error deleting image ${fileName}:`, error);
-    }
-}
-*/
-
-// 이미지 업로드 및 Vision API 분석 라우트
-/*router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
-    let fileName = '';
-    // userId를 토큰에서 가져옴
-    const userId = req.user.uid;
-
-    // 30초 타임아웃 설정
-    const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('이미지 처리 시간이 초과되었습니다.')), 30000)
-    );
-
-    try {
-        const imageProcessing = (async () => {
-            const bucket = getBucket();
-            if (!bucket) {
-                throw new Error('Firebase Storage가 초기화되지 않았습니다.');
-            }
-
-            if (!req.file || !req.file.buffer) {
-                return res.status(400).json({error: "이미지가 필요합니다."});
-            }
-
-            fileName = `ingredients/${Date.now()}-${req.file.originalname}`;
-            const file = bucket.file(fileName);
-
-            await file.save(req.file.buffer, {
-                metadata: {contentType: req.file.mimetype},
-            });
-
-            // Vision API 호출 전에 업로드 완료 대기
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-
-            // 매핑 테이블에 있다면 한글 식재료명을 가져옴
-            const translatedIngredient = await detectIngredientLabels(fileName, ingredientMap);
-
-            // Firebase에 저장할 때는 한글 식재료 이름 사용
-            await saveIngredients(userId, [translatedIngredient]);
-
-            // 이미지 분석이 완료되면 삭제
-            await deleteImageAfterAnalysis(bucket, fileName);
-
-            return translatedIngredient;
-        })();
-
-        const translatedIngredient = await Promise.race([imageProcessing, timeout]);
-
-        // 클라이언트로도 한글 식재료를 응답
-        res.json({ success: true, detectedIngredient: translatedIngredient });
-
-
-    } catch (error) {
-        console.error("Error processing image:", error);
-        // 에러 발생 시에도 이미지 삭제 시도
-        if (fileName) {
-            const bucket = getBucket();
-            await deleteImageAfterAnalysis(bucket, fileName).catch(console.error);
-        }
-        // 상세 에러 메시지 숨기기
-        res.status(500).json({ error: "이미지 처리 중 오류가 발생했습니다." });
-    }
-});
-*/
 
 // 식재료 등록 라우트
 router.post("/upload-ingredient", authMiddleware, upload.single("image"), async (req, res) => {
@@ -295,7 +215,23 @@ async function initializeRoutes() {
     }
 }
 
-//initializeRoutes().catch(console.error);
+// FMBT 계산 라우트 수정
+router.get("/calculate-fmbt", authMiddleware, async (req, res) => {
+    try {
+        // authMiddleware에서 설정된 user 객체에서 uid 가져오기
+        const userId = req.user.uid;
+
+        const { questions, responses } = await getQuestionsAndResponses(userId);
+        const fmbtResult = calculateFMBT(questions, responses);
+        await saveFMBTResult(userId, fmbtResult);
+
+        return res.json({ success: true, fmbt: fmbtResult });
+    } catch (error) {
+        console.error("FMBT 계산 중 오류 발생:", error);
+        return res.status(500).json({ error: "FMBT 계산 중 오류 발생" });
+    }
+});
+
 module.exports = {
     router,
     initializeRoutes

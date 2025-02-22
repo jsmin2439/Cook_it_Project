@@ -2,7 +2,6 @@ const express = require("express");
 const { router, initializeRoutes } = require("./routes");
 const { initializeFirebase } = require("./firebase");
 const { initializeOpenAI } = require("./openai");
-//const { initializeVision } = require("./vision");
 const { authMiddleware } = require('./auth');
 
 require("dotenv").config();
@@ -42,8 +41,6 @@ app.get("/", (req, res) => {
     res.status(200).send("Server is running");
 });
 
-let isServerInitialized = false;
-
 // 에러 처리 미들웨어 (라우터 설정 후에 추가)
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -59,9 +56,6 @@ async function startServer() {
         await initializeFirebase();
         await initializeOpenAI();
         await initializeRoutes();
-
-        //await initializeVision();
-        //console.log('Vision initialized');
 
         const PORT = process.env.PORT || 3000;
         app.listen(PORT, () => {

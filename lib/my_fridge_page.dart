@@ -6,8 +6,8 @@ import 'camera_screen.dart';
 import 'add_ingredient_page.dart';
 
 class MyFridgePage extends StatefulWidget {
-  final String userId; // userId 파라미터 추가
-  final String idToken; // 추가
+  final String userId;
+  final String idToken;
 
   const MyFridgePage({Key? key, required this.userId, required this.idToken})
       : super(key: key);
@@ -33,6 +33,7 @@ class _MyFridgePageState extends State<MyFridgePage>
     _loadUserIngredients();
   }
 
+  /// Firestore에서 재료 배열 불러오기
   Future<void> _loadUserIngredients() async {
     try {
       DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
@@ -43,6 +44,7 @@ class _MyFridgePageState extends State<MyFridgePage>
       if (docSnapshot.exists) {
         List<dynamic> ingredients = docSnapshot['ingredients'] ?? [];
         setState(() {
+          // 중복 제거 및 문자열 리스트로 변환
           _ingredients = List<String>.from(Set<String>.from(ingredients));
         });
       }
@@ -51,61 +53,60 @@ class _MyFridgePageState extends State<MyFridgePage>
     }
   }
 
-  /// **Firestore에서 `ingredients` 배열 필드에 새로운 재료 추가**
+  /// 여러 개의 재료를 한 번에 Firestore에 추가
   Future<void> _addIngredientToFirestore(List<String> ingredients) async {
     DocumentReference userDoc =
         FirebaseFirestore.instance.collection('user').doc(widget.userId);
 
     try {
       await userDoc.update({
-        "ingredients": FieldValue.arrayUnion(ingredients) // ✅ 한 번에 여러 개 추가
+        "ingredients": FieldValue.arrayUnion(ingredients)
       }).catchError((error) async {
         // 문서가 없으면 새로 생성
-        await userDoc.set({
-          "ingredients": ingredients // ✅ 최초 저장 시 배열 전체 추가
-        });
+        await userDoc.set({"ingredients": ingredients});
       });
 
-      // ✅ Firestore 저장 후 UI 업데이트
-      _loadUserIngredients();
+      // Firestore 저장 후 다시 불러와서 UI 갱신
+      await _loadUserIngredients();
     } catch (e) {
       debugPrint("재료 추가 오류: $e");
     }
   }
 
-  /// **Firestore에서 `ingredients` 배열에서 특정 재료 삭제**
-  /// **Firestore에서 `ingredients` 배열에서 특정 재료 삭제**
+  /// 특정 재료 삭제
   Future<void> _removeIngredientFromFirestore(String ingredient) async {
     DocumentReference userDoc =
         FirebaseFirestore.instance.collection('user').doc(widget.userId);
 
     await userDoc.update({
-      "ingredients": FieldValue.arrayRemove([ingredient]) // 배열에서 삭제
+      "ingredients": FieldValue.arrayRemove([ingredient])
     });
   }
 
-  /// **📌 사진을 이용한 재료 추가 (데이터 동기화 강화)**
+  /// 📌 사진을 이용한 재료 추가
   Future<void> _addIngredientByPhoto() async {
     final detectedIngredients = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CameraScreen(
+        builder: (_) => CameraScreen(
           userId: widget.userId,
           idToken: widget.idToken,
         ),
       ),
     );
 
+    /// [★핵심★] CameraScreen에서 "추가하기" 버튼을 누르면 인식된 식재료 리스트를 반환
     if (detectedIngredients != null && detectedIngredients is List<String>) {
       if (detectedIngredients.isNotEmpty) {
+        // 여러 개 재료를 한 번에 추가
         await _addIngredientToFirestore(detectedIngredients);
-        await _loadUserIngredients(); // ✅ await 추가로 동기화 보장
-        setState(() {}); // ✅ UI 강제 갱신
+        // UI 갱신
+        setState(() {});
       }
     }
   }
 
-  /// **📌 재료 추가 페이지 이동**
+  /// 재료 추가 페이지 이동
   Future<void> _goToAddIngredientPage() async {
     final List<String>? selectedItems = await Navigator.push(
       context,
@@ -118,19 +119,19 @@ class _MyFridgePageState extends State<MyFridgePage>
 
     if (selectedItems != null && selectedItems.isNotEmpty) {
       await _addIngredientToFirestore(selectedItems);
+      setState(() {});
     }
   }
 
-  /// **📌 개별 재료 삭제**
+  /// 개별 재료 삭제
   void _deleteIngredient(String ingredient) {
     setState(() {
       _ingredients.remove(ingredient);
     });
-
     _removeIngredientFromFirestore(ingredient);
   }
 
-  /// **📌 전체 삭제 확인 다이얼로그**
+  /// 전체 삭제 확인 다이얼로그
   void _confirmDeleteAllIngredients() {
     showDialog(
       context: context,
@@ -160,10 +161,11 @@ class _MyFridgePageState extends State<MyFridgePage>
     );
   }
 
-  /// **📌 재료 아이템 UI (삭제 버튼 포함, 삭제 모드일 때 흔들리는 애니메이션 적용)**
+  /// 재료 아이템 UI
   Widget _buildIngredientItem(String ingredient, int index) {
     return AnimatedBuilder(
-      animation: _isDeleteMode ? _shakeController : AlwaysStoppedAnimation(0),
+      animation:
+          _isDeleteMode ? _shakeController : const AlwaysStoppedAnimation(0),
       builder: (context, child) {
         final angle = _isDeleteMode
             ? _shakeController.value * 0.1 * (index.isEven ? 1 : -1)
@@ -241,7 +243,8 @@ class _MyFridgePageState extends State<MyFridgePage>
               setState(() {
                 if (_isDeleteMode) {
                   _shakeController
-                      .animateTo(0.0, duration: Duration(milliseconds: 200))
+                      .animateTo(0.0,
+                          duration: const Duration(milliseconds: 200))
                       .then((_) {
                     setState(() {
                       _isDeleteMode = false;
@@ -254,7 +257,7 @@ class _MyFridgePageState extends State<MyFridgePage>
               });
             },
           ),
-          if (_isDeleteMode) // ✅ 삭제 모드일 때만 보이도록 함
+          if (_isDeleteMode)
             IconButton(
               icon: const Icon(Icons.delete_sweep, color: Colors.white),
               onPressed: () {
@@ -272,7 +275,6 @@ class _MyFridgePageState extends State<MyFridgePage>
                   ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 기존 Hero 위젯 제거
                         Image.asset(
                           'assets/images/empty_fridge.png',
                           width: 200,
@@ -281,7 +283,9 @@ class _MyFridgePageState extends State<MyFridgePage>
                         Text(
                           "냉장고가 비었어요!",
                           style: TextStyle(
-                              fontSize: 18, color: Colors.grey.shade600),
+                            fontSize: 18,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                       ],
                     )
@@ -294,8 +298,9 @@ class _MyFridgePageState extends State<MyFridgePage>
                         crossAxisSpacing: 12,
                       ),
                       itemCount: _ingredients.length,
-                      itemBuilder: (context, index) =>
-                          _buildIngredientItem(_ingredients[index], index),
+                      itemBuilder: (context, index) {
+                        return _buildIngredientItem(_ingredients[index], index);
+                      },
                     ),
             ),
             const SizedBox(height: 24),

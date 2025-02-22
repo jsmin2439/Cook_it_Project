@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'result_screen.dart';
 
 class SurveyScreen extends StatefulWidget {
@@ -9,51 +10,68 @@ class SurveyScreen extends StatefulWidget {
 }
 
 class _SurveyScreenState extends State<SurveyScreen> {
-  int _currentPage = 0; // 현재 페이지 인덱스
-  List<int?> _answers = List.filled(20, null); // 선택된 답변 저장
-  final int _questionsPerPage = 5; // 한 페이지당 5개 질문
+  int _currentPage = 0;
+  List<int?> _answers = List.filled(20, null);
+  final int _questionsPerPage = 5;
 
-  // ✅ 페이지별 제목 추가
-  final List<String> _pageTitles = [
-    "E / C = 새로운 음식 선호 / 불호",
-    "F / S = 식사 속도 빠름 / 느림",
-    "S / G = 식사 환경 혼밥 / 단체",
-    "B / M = 맛 선호도 자극 / 자극 X"
-  ];
+  // Firebase data
+  List<String> _pageTitles = [];
+  List<String> _questions = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-  // ✅ 질문 리스트 (20개)
-  final List<String> _questions = [
-    // E / C 관련 질문
-    "나는 한 번도 먹어보지 않은 음식을 보면 꼭 시도해보고 싶다.",
-    "외국 음식이나 독특한 조리법의 요리를 자주 경험하려 한다.",
-    "새로운 레스토랑을 발견하면 직접 가서 먹어보는 것이 즐겁다.",
-    "익숙하지 않은 식재료가 들어간 요리를 보면 궁금증이 생긴다.",
-    "처음 보는 음식은 맛을 보기 전에 어떤 맛일지 먼저 예상해보는 편이다.",
+  @override
+  void initState() {
+    super.initState();
+    _fetchSurveyData();
+  }
 
-    // S / L 관련 질문
-    "나는 식사할 때 빠르게 먹는 편이다.",
-    "나는 식사를 하면서 여러 가지 맛을 충분히 느낀 후에 다음 한 입을 먹는다.",
-    "나는 보통 주변 사람들보다 식사를 빨리 끝내는 편이다.",
-    "나는 음식이 나오자마자 천천히 준비하고 즐기는 편보다는 바로 먹는 편이다.",
-    "음식을 씹는 횟수가 10회 미만이다.",
+  Future<void> _fetchSurveyData() async {
+    try {
+      final QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('questions').get();
 
-    // I / G 관련 질문
-    "나는 혼자 밥을 먹는 것이 더 편하다.",
-    "활발한 환경보다는 조용한 환경을 선호한다.",
-    "사람들과 대화하는 것보다 혼자 음악 들으면서 먹는 것을 선호한다.",
-    "식당을 선택할 때 혼자 가기 좋은 곳을 선호한다.",
-    "가족이나 친구들과 함께하는 식사를 더 중요하게 생각하지 않는다.",
+      // Temporary storage
+      final List<String> tempTitles = [];
+      final List<String> tempQuestions = [];
 
-    // D / M 관련 질문
-    "나는 매운 음식이나 강한 향신료가 들어간 요리를 좋아한다.",
-    "담백하고 부드러운 맛보다는 자극적인 맛을 선호한다.",
-    "음식에서 단맛, 신맛, 짠맛 등 다양한 맛을 즐기는 것이 중요하다.",
-    "너무 강한 향이 나는 음식(예: 블루치즈, 홍어)을 선호한다.",
-    "만약에 간이 잘 맞지 않는다면 어떻게든 소스를 넣으려고 한다."
-  ];
+      // Process documents in order
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        tempTitles.add(data['category']);
+        tempQuestions.addAll(List<String>.from(data['questions']));
+      }
+
+      setState(() {
+        _pageTitles = tempTitles;
+        _questions = tempQuestions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = '데이터를 불러오는데 실패했습니다: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Scaffold(
+        body: Center(
+          child: Text(_errorMessage),
+        ),
+      );
+    }
     int startIndex = _currentPage * _questionsPerPage;
     int endIndex = (startIndex + _questionsPerPage > _questions.length)
         ? _questions.length
@@ -106,8 +124,10 @@ class _SurveyScreenState extends State<SurveyScreen> {
             if (_currentPage < _pageTitles.length)
               Text(
                 _pageTitles[_currentPage],
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             const SizedBox(height: 20),
 

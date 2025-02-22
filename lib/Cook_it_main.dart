@@ -365,7 +365,7 @@ class _MainScreenState extends State<MainScreen> {
                           )),
                       if ((snapshot.data!['ingredients'] as List).length > 10)
                         Text(
-                          "+ ${(snapshot.data!['ingredients'] as List).length - 10}개 더 보기",
+                          "+ ${(snapshot.data!['ingredients'] as List).length - 10}개 더보기",
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade600,

@@ -25,7 +25,6 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void>? _initializeControllerFuture;
 
   bool _isUploading = false;
-  bool _isFlashEffectVisible = false;
   List<String> _detectedIngredients = [];
   bool _isDetectionFailed = false;
 
@@ -72,10 +71,10 @@ class _CameraScreenState extends State<CameraScreen> {
       return;
     }
     try {
+      // 카메라 초기화가 완료될 때까지 대기
       await _initializeControllerFuture;
-      // 화면 깜빡임 효과
-      _triggerFlashEffect();
 
+      // 사진 촬영
       final file = await _controller!.takePicture();
       final filePath = file.path;
       debugPrint("✅ 사진 촬영 완료: $filePath");
@@ -85,24 +84,30 @@ class _CameraScreenState extends State<CameraScreen> {
         _isDetectionFailed = false;
       });
 
+      // 서버 업로드
       final ingredients = await _uploadToServer(filePath);
 
       setState(() {
         _isUploading = false;
-        if (ingredients == null || ingredients.isEmpty) {
-          // 서버가 빈 배열 또는 null 반환 시
-          _isDetectionFailed = true;
-        } else {
-          _detectedIngredients = ingredients;
-          _showIngredientPopup(); // 팝업창 표시
-        }
       });
+
+      // 식재료 인식 결과 처리
+      if (ingredients == null || ingredients.isEmpty) {
+        // 하나도 인식하지 못한 경우
+        _showNoIngredientDialog();
+      } else {
+        // 정상적으로 인식된 경우
+        _detectedIngredients = ingredients;
+        _showIngredientPopup(); // 팝업창 표시
+      }
     } catch (e) {
       debugPrint("❌ 사진 촬영/업로드 오류: $e");
       setState(() {
         _isUploading = false;
         _isDetectionFailed = true;
       });
+      // 식재료 인식 실패 팝업
+      _showNoIngredientDialog();
     }
   }
 
@@ -127,46 +132,28 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(responseBody);
-        if (data['success'] == true && data['detectedIngredients'] != null) {
-          // ✅ 여러 재료가 한번에 감지될 경우 배열로 처리
+        // 🔹 success == true 이고 detectedIngredients가 비어있지 않은 경우만 사용
+        if (data['success'] == true &&
+            data['detectedIngredients'] != null &&
+            data['detectedIngredients'].isNotEmpty) {
           return List<String>.from(data['detectedIngredients']);
         }
       }
-      final errorMessage = _parseErrorMessage(responseBody);
-      _showErrorDialog(errorMessage);
-      return null;
+      // 여기까지 오면 식재료 인식 못함
+      return [];
     } catch (e) {
       debugPrint("❌ 업로드 예외: $e");
-      _showErrorDialog("서버 연결에 실패했습니다: ${e.toString()}");
-      return null;
+      return null; // null 반환 시 상위 로직에서 팝업 처리
     }
   }
 
-  /// 서버 응답 에러메시지 파싱
-  String _parseErrorMessage(String responseBody) {
-    try {
-      final data = jsonDecode(responseBody);
-      return data['message'] ?? '알 수 없는 오류가 발생했습니다.';
-    } catch (e) {
-      return '서버 응답을 처리하는 중 오류가 발생했습니다.';
-    }
-  }
-
-  /// 화면 깜빡임 효과
-  void _triggerFlashEffect() {
-    setState(() => _isFlashEffectVisible = true);
-    Future.delayed(const Duration(milliseconds: 100), () {
-      setState(() => _isFlashEffectVisible = false);
-    });
-  }
-
-  /// 에러 메시지 팝업
-  void _showErrorDialog(String message) {
+  /// 식재료 하나도 인식 못했을 때 팝업
+  void _showNoIngredientDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("오류"),
-        content: Text(message),
+        title: const Text("식재료 인식 실패"),
+        content: const Text("식재료를 인식하지 못하였습니다."),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -209,8 +196,6 @@ class _CameraScreenState extends State<CameraScreen> {
                   onPressed: () {
                     // "추가하기"를 누르면 인식된 식재료들을 MyFridgePage로 반환
                     Navigator.pop(context, _detectedIngredients);
-                    // [추가 요청] MyFridgePage로 바로 이동해 목록 확인
-                    // 실제로는 pop() 만으로 MyFridgePage로 돌아감
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPinkButtonColor,
@@ -224,14 +209,11 @@ class _CameraScreenState extends State<CameraScreen> {
         );
       },
     ).then((result) {
-      // 팝업창이 닫힌 뒤에도 별도 처리가 필요하면 여기서.
-      // 예: result가 null이면 취소
       if (result == null) {
         debugPrint("사용자가 팝업에서 취소 버튼 누름");
       } else {
         debugPrint("인식된 식재료 목록 반환: $result");
         Navigator.pop(context, result);
-        // => MyFridgePage로 식재료 목록 전송
       }
     });
   }
@@ -262,7 +244,7 @@ class _CameraScreenState extends State<CameraScreen> {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
-              // 팝업 내부 setState
+              // 해당 식재료 팝업상 실시간 삭제
               setStateDialog(() {
                 _detectedIngredients.remove(ingredient);
               });
@@ -291,6 +273,7 @@ class _CameraScreenState extends State<CameraScreen> {
       ),
       body: Stack(
         children: [
+          // 카메라 미리보기
           FutureBuilder<void>(
             future: _initializeControllerFuture,
             builder: (context, snapshot) {
@@ -306,11 +289,8 @@ class _CameraScreenState extends State<CameraScreen> {
               }
             },
           ),
-          AnimatedOpacity(
-            opacity: _isFlashEffectVisible ? 1.0 : 0.0,
-            duration: const Duration(milliseconds: 100),
-            child: Container(color: Colors.white),
-          ),
+
+          // 업로드 중 로딩 인디케이터
           if (_isUploading)
             const Center(
               child: CircularProgressIndicator(color: Colors.redAccent),

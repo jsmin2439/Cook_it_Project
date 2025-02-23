@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const admin = require("firebase-admin");
 const { initializeFirebase, loadIngredientMap, getUserIngredients, findTopRecipes } = require("./firebase");
 const { recommendTop3Recipes } = require("./openai");
 const { authMiddleware } = require('./auth');
@@ -7,7 +8,7 @@ const { verifyLogin } = require('./auth');
 const { calculateMatchScore, getQuestionsAndResponses, calculateFMBT, saveFMBTResult } = require("./utils");
 const axios = require('axios');
 const FormData = require('form-data');
-const FASTAPI_URL = process.env.FASTAPI_URL || 'http://localhost:8000';
+const FASTAPI_URL = process.env.FASTAPI_URL;
 
 
 const router = express.Router();
@@ -218,17 +219,41 @@ async function initializeRoutes() {
 // FMBT 계산 라우트 수정
 router.get("/calculate-fmbt", authMiddleware, async (req, res) => {
     try {
-        // authMiddleware에서 설정된 user 객체에서 uid 가져오기
         const userId = req.user.uid;
+        const db = admin.firestore();
 
+        // 1. FMBT 계산
         const { questions, responses } = await getQuestionsAndResponses(userId);
-        const fmbtResult = calculateFMBT(questions, responses);
-        await saveFMBTResult(userId, fmbtResult);
+        const { fmbt: fmbtResult, scores } = calculateFMBT(questions, responses);
 
-        return res.json({ success: true, fmbt: fmbtResult });
+        // 2. FMBT 설명 조회
+        const fmbtDoc = await db.collection('fmbt_descriptions').doc(fmbtResult).get();
+
+        if (!fmbtDoc.exists) {
+            throw new Error(`FMBT 설명을 찾을 수 없습니다: ${fmbtResult}`);
+        }
+
+        // 3. 유저 문서에 FMBT 결과 저장
+        await db.collection('user').doc(userId).update({
+            fmbt: fmbtResult,
+            fmbtScores: scores,
+            fmbtUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 4. 결과 반환
+        return res.json({
+            success: true,
+            fmbt: fmbtResult,
+            scores: scores,
+            description: fmbtDoc.data().description
+        });
+
     } catch (error) {
-        console.error("FMBT 계산 중 오류 발생:", error);
-        return res.status(500).json({ error: "FMBT 계산 중 오류 발생" });
+        console.error("FMBT 처리 중 오류 발생:", error);
+        return res.status(500).json({
+            success: false,
+            error: "FMBT 처리 중 오류가 발생했습니다"
+        });
     }
 });
 

@@ -37,27 +37,45 @@ async function getQuestionsAndResponses(userId) {
     if (!userDoc.exists) {
         throw new Error("사용자 응답 데이터를 찾을 수 없습니다.");
     }
-    const responses = userDoc.data().responses;
+    const userData = userDoc.data();
+    const responses = {
+        "1": userData["responses-1"] || [],
+        "2": userData["responses-2"] || [],
+        "3": userData["responses-3"] || [],
+        "4": userData["responses-4"] || []
+    };
 
     return { questions, responses };
 }
 
 function calculateFMBT(questions, responses) {
-    const categoryMapping = {
-        "1": "E_C",
-        "2": "F_S",
-        "3": "S_G",
-        "4": "B_M"
+
+    const scores = {
+        E_C: 0,  // responses-1
+        F_S: 0,  // responses-2
+        S_G: 0,  // responses-3
+        B_M: 0   // responses-4
     };
 
-    const scores = { E_C: 0, F_S: 0, S_G: 0, B_M: 0 };
+    // responses-1 합계 계산 (E_C)
+    if (responses["1"]) {
+        scores.E_C = responses["1"].reduce((sum, score) => sum + score, 0);
+    }
 
-    Object.keys(questions).forEach(questionId => {
-        const category = categoryMapping[questionId];
-        if (responses[questionId]) {
-            scores[category] += responses[questionId].reduce((sum, score) => sum + score, 0);
-        }
-    });
+    // responses-2 합계 계산 (F_S)
+    if (responses["2"]) {
+        scores.F_S = responses["2"].reduce((sum, score) => sum + score, 0);
+    }
+
+    // responses-3 합계 계산 (S_G)
+    if (responses["3"]) {
+        scores.S_G = responses["3"].reduce((sum, score) => sum + score, 0);
+    }
+
+    // responses-4 합계 계산 (B_M)
+    if (responses["4"]) {
+        scores.B_M = responses["4"].reduce((sum, score) => sum + score, 0);
+    }
 
     const fmbt = [
         scores.E_C >= 15 ? "E" : "C",
@@ -66,7 +84,7 @@ function calculateFMBT(questions, responses) {
         scores.B_M >= 15 ? "B" : "M"
     ].join("");
 
-    return fmbt;
+    return { fmbt, scores };
 }
 
 async function saveFMBTResult(userId, fmbtResult) {

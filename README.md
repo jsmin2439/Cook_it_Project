@@ -1,4 +1,5 @@
-# ![Cook_it_Project](https://www.canva.com/design/DAGf1F-Hcjk/UlB5WBLQVJFTFch5h2eQPg/edit)
+
+![단락 텍스트](https://github.com/user-attachments/assets/6b0c7cab-848f-4f16-aa3b-20d66b4898ab)
 
 
 ### 지도교수: 이상호 교수님

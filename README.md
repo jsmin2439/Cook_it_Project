@@ -1,6 +1,5 @@
-# Cook_it_Project
+# 🚀 **Cook_it_Project** 🚀
 
-![Cook_it_Project](C:\Users\makbo/image.png)
 
 
 ### 지도교수: 이상호 교수님

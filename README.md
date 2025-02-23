@@ -1,5 +1,6 @@
 
-![단락 텍스트](https://github.com/user-attachments/assets/6b0c7cab-848f-4f16-aa3b-20d66b4898ab)
+![단락 텍스트1](https://github.com/user-attachments/assets/b3ec0e5a-7b43-48bd-ae90-61aca1a63ba0)
+
 
 
 ### 지도교수: 이상호 교수님

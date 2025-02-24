@@ -12,7 +12,7 @@ function initializeOpenAI() {
 }
 
 // GPT-4를 사용하여 최종 레시피 3개 추천 함수
-async function recommendTop3Recipes(userIngredients, topRecipes) {
+async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
     if (!userIngredients || !userIngredients.ingredients || !topRecipes) {
         throw new Error('유효하지 않은 입력 데이터입니다.');
     }
@@ -46,7 +46,7 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
         }));
 
         const gptResponse = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4",
             messages: [
                 {
                     role: "system",
@@ -55,7 +55,8 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
                         "1. 알레르기 식재료가 포함된 레시피는 제외\n" +
                         "2. 싫어하는 식재료가 포함된 레시피는 가능한 제외\n" +
                         "3. 재료 매칭도를 우선적으로 고려\n" +
-                        "4. 카테고리 다양성 고려"
+                        "4. 사용자의 FMBT 취향을 고려\n" +
+                        "5. 카테고리 다양성 고려"
                 },
                 {
                     role: "user",
@@ -64,26 +65,47 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
                     - 보유 식재료: ${ingredients.join(", ")}
                     - 싫어하는 식재료: ${disliked_ingredients.join(", ")}
                     - 알레르기 식재료: ${allergic_ingredients.join(", ")}
+                    - FMBT 유형: ${userFMBT}
 
                     레시피 목록:
                     ${JSON.stringify(simplifiedRecipes, null, 1)}
 
                     다음 형식으로 응답해주세요:
                     {
-                        "recommendedRecipes": ["레시피ID1", "레시피ID2", "레시피ID3"]
+                        "recommendedRecipes": [
+                            {
+                                "id": "레시피ID",
+                                "reason": "추천 이유"
+                            },
+                            {
+                                "id": "레시피ID",
+                                "reason": "추천 이유"
+                            },
+                            {
+                                "id": "레시피ID",
+                                "reason": "추천 이유"
+                            }
+                        ]
                     }`,
                 },
             ],
             temperature: 0.7,
-            max_tokens: 150,
+            max_tokens: 500,
         });
 
         const recommendations = JSON.parse(gptResponse.choices[0].message.content);
 
         const recommendedRecipesData = await Promise.all(
-            recommendations.recommendedRecipes.map(async (recipeId) => {
-                const doc = await db.collection("recipes").doc(recipeId).get();
-                return doc.exists ? { id: doc.id, ...doc.data() } : null;
+            recommendations.recommendedRecipes.map(async (recommendation) => {
+                const doc = await db.collection("recipes").doc(recommendation.id).get();
+                if (!doc.exists) return null;
+
+                return {
+                    id: doc.id,
+                    ...doc.data(),
+                    fmbtInfo: userFMBT, // FMBT 정보 추가
+                    recommendReason: recommendation.reason // 추천 이유 추가
+                };
             })
         );
 
@@ -91,7 +113,11 @@ async function recommendTop3Recipes(userIngredients, topRecipes) {
 
         if (validRecommendedRecipes.length < 3) {
             console.log("추천된 레시피가 충분치 않아 상위 3개를 반환합니다.");
-            return topRecipes.slice(0, 3).map((recipe) => recipe.fullData);
+            return topRecipes.slice(0, 3).map((recipe) => ({
+                ...recipe.fullData,
+                fmbtInfo: userFMBT,
+                recommendReason: "재료 매칭도 기준 상위 레시피"
+            }));
         }
         return validRecommendedRecipes;
     } catch (error) {

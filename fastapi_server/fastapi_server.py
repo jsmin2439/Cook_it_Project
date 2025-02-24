@@ -26,7 +26,7 @@ app.add_middleware(
 
 # YOLO 모델 로드 함수
 def load_model():
-    model_path = 'best.pt'
+    model_path = 'yolov8m.pt'
     if not Path(model_path).exists():
         raise FileNotFoundError(f"모델 파일을 찾을 수 없습니다: {model_path}")
     try:

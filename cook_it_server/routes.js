@@ -88,6 +88,11 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
     try {
         // userId를 토큰에서 가져옴
         const userId = req.user.uid;
+        const db = admin.firestore();
+
+        // FMBT 정보 조회 추가
+        const userDoc = await db.collection('user').doc(userId).get();
+        const userFMBT = userDoc.data().fmbt;
         const userIngredients = await getUserIngredients(userId);
 
 
@@ -99,7 +104,7 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
             return res.status(404).json({ error: "매칭되는 레시피가 없습니다." });
         }
 
-        const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes);
+        const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes, userFMBT);
         if (!recommendedRecipes || recommendedRecipes.length === 0) {
             return res.status(404).json({ error: "추천 레시피를 찾을 수 없습니다." });
         }
@@ -164,6 +169,8 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
                 RCP_PAT2: recipe.RCP_PAT2,
                 RCP_SEQ: recipe.RCP_SEQ,
                 RCP_WAY2: recipe.RCP_WAY2,
+                fmbtInfo: recipe.fmbtInfo,  // FMBT 정보 추가
+                recommendReason: recipe.recommendReason  // 추천 이유 추가
             })),
         });
     } catch (error) {
@@ -233,11 +240,12 @@ router.get("/calculate-fmbt", authMiddleware, async (req, res) => {
             throw new Error(`FMBT 설명을 찾을 수 없습니다: ${fmbtResult}`);
         }
 
+        const fmbtDescription = fmbtDoc.data().description;
+
         // 3. 유저 문서에 FMBT 결과 저장
         await db.collection('user').doc(userId).update({
             fmbt: fmbtResult,
-            fmbtScores: scores,
-            fmbtUpdatedAt: admin.firestore.FieldValue.serverTimestamp()
+            fmbtScores: scores
         });
 
         // 4. 결과 반환
@@ -245,7 +253,7 @@ router.get("/calculate-fmbt", authMiddleware, async (req, res) => {
             success: true,
             fmbt: fmbtResult,
             scores: scores,
-            description: fmbtDoc.data().description
+            description: fmbtDescription
         });
 
     } catch (error) {

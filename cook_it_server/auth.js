@@ -24,10 +24,28 @@ async function authMiddleware(req, res, next) {
 async function verifyLogin(idToken) {
     try {
         const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const db = admin.firestore();
+
+        // 사용자 문서 조회
+        const userDoc = await db.collection('user').doc(decodedToken.uid).get();
+        const isFirstLogin = !userDoc.exists;
+
+        // 첫 로그인이면 사용자 문서 생성
+        if (isFirstLogin) {
+            await db.collection('user').doc(decodedToken.uid).set({
+                email: decodedToken.email,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                ingredients: [],
+                disliked_ingredients: [],
+                allergic_ingredients: []
+            });
+        }
+
         return {
             success: true,
             uid: decodedToken.uid,
-            email: decodedToken.email
+            email: decodedToken.email,
+            isFirstLogin: isFirstLogin
         };
     } catch (error) {
         console.error('Login verification error:', error);

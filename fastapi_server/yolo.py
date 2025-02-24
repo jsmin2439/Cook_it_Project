@@ -1,8 +1,8 @@
 import cv2
 from ultralytics import YOLO
 
-# 모델 로드 (Colab에서 학습한 best.pt 파일 사용)
-model = YOLO("best.pt")
+# 모델 로드 (Colab에서 학습한 yolov8s.pt 파일 사용)
+model = YOLO("yolov8s.pt")
 
 # 웹캠 열기
 cap = cv2.VideoCapture(0)

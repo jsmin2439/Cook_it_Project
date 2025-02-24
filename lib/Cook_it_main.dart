@@ -10,9 +10,11 @@ import 'survey_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// 색상 팔레트
-const Color kBackgroundColor = Color(0xFFFFFFFF);
-const double kBorderRadius = 16.0;
+const Color kBackgroundColor = Color(0xFFFFFFFF); // 전체 배경: 흰색
+const Color kCardColor = Color(0xFFFFECD0); // 카드 배경: 연한 베이지
+const Color kPinkButtonColor = Color(0xFFFFC7B9); // 핑크
+const Color kTextColor = Colors.black87; // 텍스트 색상
+const double kBorderRadius = 16.0; // 둥근 모서리
 
 class MainScreen extends StatefulWidget {
   final String idToken;
@@ -35,6 +37,7 @@ class _MainScreenState extends State<MainScreen> {
   String? _fmbtResult;
   int _currentPage = 0;
   final PageController _pageController = PageController();
+
   List<dynamic> _recommendedRecipes = [];
   bool _isLoading = false;
 
@@ -45,37 +48,44 @@ class _MainScreenState extends State<MainScreen> {
     _fetchFMBTResult();
   }
 
+  /// Firestore에서 fmbt 필드 로드
   Future<void> _fetchFMBTResult() async {
     try {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+      final doc = await FirebaseFirestore.instance
           .collection('user')
           .doc(widget.userId)
           .get();
-      if (userDoc.exists) {
-        setState(() => _fmbtResult = userDoc['fmbt'] as String?);
+
+      if (doc.exists) {
+        setState(() {
+          _fmbtResult = doc.data()?['fmbt'] as String?;
+        });
       }
     } catch (e) {
-      print('FMBT 결과 조회 오류: $e');
+      debugPrint('FMBT 결과 조회 오류: $e');
     }
   }
 
+  /// AI 레시피 서버 통신
   Future<void> _fetchRecommendedRecipes() async {
     setState(() => _isLoading = true);
     try {
+      final uri =
+          Uri.parse("http://jsmin2439.iptime.org:3000/api/recommend-recipes");
       final response = await http.post(
-        Uri.parse("http://jsmin2439.iptime.org:3000/api/recommend-recipes"),
+        uri,
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer ${widget.idToken}"
+          "Authorization": "Bearer ${widget.idToken}",
         },
         body: jsonEncode({"userId": widget.userId}),
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data["success"] == true && data["recommendedRecipes"] != null) {
-          setState(() => _recommendedRecipes =
-              data["recommendedRecipes"].take(3).toList());
+          setState(() {
+            _recommendedRecipes = data["recommendedRecipes"].take(3).toList();
+          });
         }
       }
     } catch (e) {
@@ -84,20 +94,26 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _isLoading = false);
   }
 
+  /// 로그아웃 처리
   void _handleLogout() {
     FirebaseAuth.instance.signOut();
     Navigator.pushReplacement(
-        context, MaterialPageRoute(builder: (context) => const LoginScreen()));
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
+  /// 하단 탭
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
-    if (index == 2)
+    if (index == 2) {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => const SearchScreen()));
-    if (index == 3)
+    }
+    if (index == 3) {
       Navigator.push(
           context, MaterialPageRoute(builder: (_) => const HeartScreen()));
+    }
   }
 
   @override
@@ -121,38 +137,51 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  //--------------------------------------------------------------------------
+  // 상단 영역
+  //--------------------------------------------------------------------------
+
   Widget _buildAppBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          Row(children: [
-            Image.asset('assets/images/cookie.png', width: 50, height: 50),
-            const SizedBox(width: 8),
-            const Text('Cook it',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          ]),
+          // 로고
+          Row(
+            children: [
+              Image.asset('assets/images/cookie.png', width: 50, height: 50),
+              const SizedBox(width: 8),
+              const Text('Cook it',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ],
+          ),
           const Spacer(),
           IconButton(
               icon: const Icon(Icons.notifications_none), onPressed: () {}),
           IconButton(
-              icon: const Icon(Icons.logout),
-              color: Colors.red[300],
-              onPressed: _handleLogout),
+            icon: const Icon(Icons.logout),
+            color: Colors.redAccent,
+            onPressed: _handleLogout,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildUserGreeting() {
+    final userName = widget.userEmail.split('@').first;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Text(
-        "${widget.userEmail.split('@').first}님 환영합니다!",
+        "$userName님 환영합니다!",
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     );
   }
+
+  //--------------------------------------------------------------------------
+  // 메인 컨텐츠: 냉장고 / AI 레시피 / FMBT / 싫어하는 재료
+  //--------------------------------------------------------------------------
 
   Widget _buildMainContent() {
     return Column(
@@ -168,39 +197,40 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  //--------------------------------------------------------------------------
+  // 1) 나만의 냉장고 카드
+  //--------------------------------------------------------------------------
+
   Widget _buildMyFridgeCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kBorderRadius)),
-        child: Container(
-          height: 240,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.purple[100]!, Colors.pink[100]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(kBorderRadius),
-          ),
+      child: Container(
+        height: 240,
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(kBorderRadius),
+          border: Border.all(color: Colors.black26),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 제목
               Row(
                 children: [
-                  Icon(Icons.kitchen, color: Colors.deepPurple[800], size: 28),
+                  Icon(Icons.kitchen, color: Colors.brown[700], size: 28),
                   const SizedBox(width: 10),
                   Text("나만의 냉장고",
                       style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple[800])),
+                          color: Colors.brown[700])),
                 ],
               ),
-              const SizedBox(height: 15),
+              const SizedBox(height: 10),
+
+              // 재료 목록
               Expanded(
                 child: FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
@@ -208,65 +238,75 @@ class _MainScreenState extends State<MainScreen> {
                       .doc(widget.userId)
                       .get(),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData || !snapshot.data!.exists) {
-                      return Center(
-                          child: Text("재료를 추가해보세요!",
-                              style: TextStyle(color: Colors.grey[600])));
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
                     }
-                    List<String> ingredients =
-                        List<String>.from(snapshot.data!['ingredients'] ?? []);
-                    return ingredients.isEmpty
-                        ? Center(
-                            child: Text("재료를 추가해보세요!",
-                                style: TextStyle(color: Colors.grey[600])))
-                        : SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 10,
-                              runSpacing: 10,
-                              children: [
-                                ...ingredients.take(10).map((ingredient) =>
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.3),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: Colors.white),
-                                      ),
-                                      child: Text(ingredient,
-                                          style: const TextStyle(
-                                              color: Colors.black87)),
-                                    )),
-                                if (ingredients.length > 10)
-                                  Text("+ ${ingredients.length - 10}개 더보기",
-                                      style:
-                                          TextStyle(color: Colors.grey[600])),
-                              ],
-                            ),
-                          );
+                    if (!snapshot.data!.exists) {
+                      return _buildFridgeEmptyText();
+                    }
+                    final docData =
+                        snapshot.data!.data() as Map<String, dynamic>;
+                    final rawList = docData['ingredients'] ?? [];
+                    if (rawList == null || rawList.isEmpty) {
+                      return _buildFridgeEmptyText();
+                    }
+
+                    List<String> ingredients = List<String>.from(rawList);
+                    return SingleChildScrollView(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ...ingredients.take(10).map(
+                                (i) => Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.8),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: Colors.white),
+                                  ),
+                                  child: Text(i,
+                                      style: const TextStyle(
+                                          color: Colors.black87)),
+                                ),
+                              ),
+                          if (ingredients.length > 10)
+                            Text("+ ${ingredients.length - 10}개 더보기",
+                                style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    );
                   },
                 ),
               ),
+
+              // 관리하기 버튼
               Align(
                 alignment: Alignment.centerRight,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.arrow_forward, size: 18),
                   label: const Text("관리하기"),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
+                    backgroundColor: Colors.brown[300],
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
-                  ),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MyFridgePage(
-                          userId: widget.userId, idToken: widget.idToken),
+                      borderRadius: BorderRadius.circular(20),
                     ),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MyFridgePage(
+                          userId: widget.userId,
+                          idToken: widget.idToken,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -276,44 +316,45 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Widget _buildFridgeEmptyText() {
+    return Center(
+      child: Text("재료를 추가해보세요!",
+          style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+    );
+  }
+
+  //--------------------------------------------------------------------------
+  // 2) AI 맞춤 레시피
+  //--------------------------------------------------------------------------
+
   Widget _buildAiRecipeCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kBorderRadius)),
-        child: Container(
-          height: 240,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blue[100]!, Colors.cyan[100]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(kBorderRadius),
-          ),
+      child: Container(
+        height: 240,
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(kBorderRadius),
+          border: Border.all(color: Colors.black26),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // 제목 + 새로고침 아이콘
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Image.asset('assets/images/cookbook.png',
-                          width: 32, height: 32),
-                      const SizedBox(width: 10),
-                      Text("AI 맞춤 레시피",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[900],
-                          )),
-                    ],
-                  ),
+                  Image.asset('assets/images/cookbook.png',
+                      width: 30, height: 30),
+                  const SizedBox(width: 8),
+                  Text("AI 맞춤 레시피",
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown[700])),
+                  const Spacer(),
                   IconButton(
-                    icon: Icon(Icons.refresh, color: Colors.blue[800]),
+                    icon: Icon(Icons.refresh, color: Colors.brown[600]),
                     onPressed: _fetchRecommendedRecipes,
                   ),
                 ],
@@ -321,93 +362,38 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 10),
               Expanded(
                 child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.blue))
+                    ? const Center(child: CircularProgressIndicator())
                     : _recommendedRecipes.isEmpty
                         ? Center(
-                            child: Text("추천 레시피를 생성중입니다...",
+                            child: Text("추천 레시피를 가져오는 중...",
                                 style: TextStyle(color: Colors.grey[600])))
                         : PageView.builder(
                             controller: _pageController,
-                            onPageChanged: (index) =>
-                                setState(() => _currentPage = index),
                             itemCount: _recommendedRecipes.length,
+                            onPageChanged: (index) {
+                              setState(() => _currentPage = index);
+                            },
                             itemBuilder: (context, index) {
                               final recipe = _recommendedRecipes[index];
-                              return GestureDetector(
-                                // GestureDetector 추가
-                                onTap: () =>
-                                    _navigateToRecipeDetail(recipe, context),
-                                child: Container(
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(15),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 6,
-                                        offset: Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(15),
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: Image.network(
-                                            recipe["ATT_FILE_NO_MAIN"] ?? "",
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            errorBuilder: (_, __, ___) =>
-                                                Container(
-                                              color: Colors.grey[200],
-                                              child: Icon(Icons.fastfood,
-                                                  size: 50,
-                                                  color: Colors.grey[500]),
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.all(10),
-                                          color: Colors.white,
-                                          child: Text(
-                                            recipe["RCP_NM"] ?? "No Name",
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
+                              return _buildRecipeItem(recipe);
                             },
                           ),
               ),
+              const SizedBox(height: 10),
               if (!_isLoading && _recommendedRecipes.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _recommendedRecipes.length,
-                      (index) => Container(
-                        width: _currentPage == index ? 12 : 8,
-                        height: 8,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          color: _currentPage == index
-                              ? Colors.blue[800]
-                              : Colors.grey[400],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    _recommendedRecipes.length,
+                    (index) => Container(
+                      width: _currentPage == index ? 12 : 8,
+                      height: 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: _currentPage == index
+                            ? Colors.brown[700]
+                            : Colors.grey[400],
+                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
@@ -419,135 +405,175 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _navigateToRecipeDetail(
-      Map<String, dynamic> recipe, BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RecipeDetailPage(
-          recipeData: recipe,
-          userId: widget.userId, // 사용자 ID 전달
+  Widget _buildRecipeItem(dynamic recipe) {
+    final String imageUrl = recipe["ATT_FILE_NO_MAIN"] ?? "";
+    final String recipeName = recipe["RCP_NM"] ?? "No Name";
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecipeDetailPage(
+              recipeData: recipe,
+              userId: widget.userId,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+          color: Colors.white,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              // 이미지
+              Expanded(
+                child: imageUrl.isEmpty
+                    ? Container(
+                        color: Colors.grey[200],
+                        child: const Icon(Icons.fastfood,
+                            size: 50, color: Colors.grey),
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+              ),
+              // 텍스트
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.all(8),
+                width: double.infinity,
+                child: Text(
+                  recipeName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
+
+  //--------------------------------------------------------------------------
+  // 3) 나만의 입맛 분석소 (FMBT)
+  //--------------------------------------------------------------------------
 
   Widget _buildTasteLabCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kBorderRadius)),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.pink[100]!, Colors.orange[100]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+          // FMBT 카드
+          Container(
+            decoration: BoxDecoration(
+              color: kCardColor,
+              borderRadius: BorderRadius.circular(kBorderRadius),
+              border: Border.all(color: Colors.black26),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  "🍽️ 나의 식습관 좌표 FMBT",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                borderRadius: BorderRadius.circular(kBorderRadius),
-              ),
-              child: Column(
-                children: [
-                  const Text("🍽️ 나의 식습관 좌표",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 15),
-                  _fmbtResult != null
-                      ? Column(
-                          children: [
-                            Text("FMBT 유형:",
-                                style: TextStyle(color: Colors.grey[700])),
-                            const SizedBox(height: 8),
-                            Text(_fmbtResult!,
-                                style: const TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.deepPurple,
-                                    letterSpacing: 4)),
-                            const SizedBox(height: 10),
-                            const Text(
-                                "이 유형은 새로운 음식을 좋아하고,\n빠른 식사 속도를 가진 특징이 있습니다!",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.black54)),
-                          ],
-                        )
-                      : ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color.fromARGB(255, 243, 164, 222),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20)),
+                const SizedBox(height: 12),
+                if (_fmbtResult == null)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kPinkButtonColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                    onPressed: _goToSurvey,
+                    child:
+                        const Text("FMBT 검사하기", style: TextStyle(fontSize: 16)),
+                  )
+                else
+                  Column(
+                    children: [
+                      const Text("이미 검사하셨습니다!",
+                          style: TextStyle(color: Colors.brown)),
+                      const SizedBox(height: 6),
+                      Text("FMBT 유형: $_fmbtResult",
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orangeAccent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SurveyScreen(
-                                userId: widget.userId,
-                                idToken: widget.idToken,
-                              ),
-                            ),
-                          ),
-                          child: const Text("FMBT 검사 시작하기",
-                              style: TextStyle(fontSize: 16)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
-                ],
-              ),
+                        onPressed: _resetSurveyAndRetest,
+                        child: const Text("다시 검사하기",
+                            style: TextStyle(fontSize: 16)),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 20),
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(kBorderRadius)),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue[100]!, Colors.green[100]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+          // 맛 취향 분석 (예시)
+          Container(
+            decoration: BoxDecoration(
+              color: kCardColor,
+              borderRadius: BorderRadius.circular(kBorderRadius),
+              border: Border.all(color: Colors.black26),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  "👅 맛 취향 분석",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                borderRadius: BorderRadius.circular(kBorderRadius),
-              ),
-              child: Column(
-                children: [
-                  const Text("👅 맛 취향 분석",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 15),
-                  const Icon(Icons.analytics_outlined,
-                      size: 50, color: Colors.blue),
-                  const SizedBox(height: 10),
-                  Text(
-                    _fmbtResult != null
-                        ? "당신의 $_fmbtResult 유형에 맞는\n맛 취향 분석을 진행해보세요!"
-                        : "FMBT 검사 후 이용 가능합니다",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[700], height: 1.4),
-                  ),
-                  const SizedBox(height: 15),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          _fmbtResult != null ? Colors.green : Colors.grey,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 25, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                    ),
-                    onPressed: _fmbtResult != null ? () {} : null,
-                    child:
-                        const Text("분석 시작하기", style: TextStyle(fontSize: 16)),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 12),
+                _fmbtResult == null
+                    ? const Text("FMBT 검사 후 이용 가능합니다.",
+                        style: TextStyle(color: Colors.grey))
+                    : ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.lightGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                        onPressed: _startTasteAnalysis,
+                        child: const Text("분석 시작하기",
+                            style: TextStyle(fontSize: 16)),
+                      ),
+              ],
             ),
           ),
         ],
@@ -555,48 +581,101 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// FMBT 검사 화면 이동
+  void _goToSurvey() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SurveyScreen(
+          userId: widget.userId,
+          idToken: widget.idToken,
+        ),
+      ),
+    );
+  }
+
+  /// 이미 검사한 사람도 다시 검사
+  /// Firestore에서 responses-1..4 = [0,0,0,0,0], fmbt 필드 삭제
+  Future<void> _resetSurveyAndRetest() async {
+    try {
+      final docRef =
+          FirebaseFirestore.instance.collection('user').doc(widget.userId);
+      await docRef.update({
+        'responses-1': [0, 0, 0, 0, 0],
+        'responses-2': [0, 0, 0, 0, 0],
+        'responses-3': [0, 0, 0, 0, 0],
+        'responses-4': [0, 0, 0, 0, 0],
+        'fmbt': FieldValue.delete(),
+      });
+      setState(() => _fmbtResult = null);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SurveyScreen(
+            userId: widget.userId,
+            idToken: widget.idToken,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint("재검사 초기화 오류: $e");
+    }
+  }
+
+  /// 맛 취향 분석 (TODO)
+  void _startTasteAnalysis() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("맛 취향 분석 기능은 준비 중입니다."),
+    ));
+  }
+
+  //--------------------------------------------------------------------------
+  // 4) 싫어하거나 피하고 싶은 재료
+  //--------------------------------------------------------------------------
+
   Widget _buildIngredientsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(kBorderRadius)),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.yellow[100]!, Colors.orange[100]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardColor,
+          borderRadius: BorderRadius.circular(kBorderRadius),
+          border: Border.all(color: Colors.black26),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const Text(
+              "싫어하거나 피하고 싶은 재료가 있나요?",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            borderRadius: BorderRadius.circular(kBorderRadius),
-          ),
-          child: Column(
-            children: [
-              const Text("싫어하거나 피하고 싶은 재료가 있나요?",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildIngredientChip("알코올"),
-                  _buildIngredientChip("달걀"),
-                  _buildIngredientChip("우유"),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange[800],
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildIngredientChip("알코올"),
+                _buildIngredientChip("달걀"),
+                _buildIngredientChip("우유"),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPinkButtonColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                onPressed: () {},
-                child: const Text("수정하기"),
               ),
-            ],
-          ),
+              onPressed: () {
+                // TODO: 수정하기
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("수정하기 기능은 준비 중입니다.")),
+                );
+              },
+              child: const Text("수정하기"),
+            ),
+          ],
         ),
       ),
     );
@@ -613,6 +692,10 @@ class _MainScreenState extends State<MainScreen> {
       child: Text(label, style: const TextStyle(fontSize: 14)),
     );
   }
+
+  //--------------------------------------------------------------------------
+  // 하단 네비게이션
+  //--------------------------------------------------------------------------
 
   BottomNavigationBar _buildBottomNavBar() {
     return BottomNavigationBar(

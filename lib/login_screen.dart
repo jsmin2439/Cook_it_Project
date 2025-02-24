@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'signup_screen.dart';
 import 'Cook_it_main.dart';
 import 'survey_screen.dart'; // 추가
+import 'welcome_fmbt_screen.dart';
 
 const Color kButtonColor = Color(0xFFF7C15E);
 const Color kHintBorderColor = Colors.black54;
@@ -60,19 +61,17 @@ class _LoginScreenState extends State<LoginScreen> {
         final bool isFirstLogin = responseData['isFirstLogin'] ?? false;
 
         if (isFirstLogin) {
-          // 첫 로그인인 경우 FMBT 검사 화면으로 이동
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => SurveyScreen(
-                userId: responseData['uid'],
+              builder: (context) => WelcomeFmbtScreen(
                 idToken: idToken,
-                isFirstLogin: true, // FMBT 검사 후 메인으로 이동하기 위한 플래그
+                userId: responseData['uid'],
+                userEmail: _emailController.text.trim(),
               ),
             ),
           );
         } else {
-          // 기존 사용자는 메인 화면으로 이동
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(

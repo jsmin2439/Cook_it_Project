@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'signup_screen.dart';
 import 'Cook_it_main.dart';
+import 'survey_screen.dart'; // 추가
 
 const Color kButtonColor = Color(0xFFF7C15E);
 const Color kHintBorderColor = Colors.black54;
@@ -45,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _verifyLoginWithServer(String idToken) async {
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.0.254:3000/api/verify-login"),
+        Uri.parse("http://jsmin2439.iptime.org:3000/api/verify-login"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $idToken" // Bearer 토큰 추가
@@ -56,16 +57,33 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.statusCode == 200) {
         print("서버 로그인 성공: ${response.body}");
         final responseData = jsonDecode(response.body);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainScreen(
-              idToken: idToken,
-              userId: responseData['uid'], // 서버 응답에서 uid 추출
-              userEmail: _emailController.text.trim(),
+        final bool isFirstLogin = responseData['isFirstLogin'] ?? false;
+
+        if (isFirstLogin) {
+          // 첫 로그인인 경우 FMBT 검사 화면으로 이동
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SurveyScreen(
+                userId: responseData['uid'],
+                idToken: idToken,
+                isFirstLogin: true, // FMBT 검사 후 메인으로 이동하기 위한 플래그
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          // 기존 사용자는 메인 화면으로 이동
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainScreen(
+                idToken: idToken,
+                userId: responseData['uid'],
+                userEmail: _emailController.text.trim(),
+              ),
+            ),
+          );
+        }
       } else {
         print("서버 로그인 실패: ${response.body}");
       }

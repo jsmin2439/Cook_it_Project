@@ -1,8 +1,6 @@
 import json
 import re
 import pandas as pd
-import itertools
-import networkx as nx
 from konlpy.tag import Komoran, Okt, Kkma
 
 # JSON 파일 로드

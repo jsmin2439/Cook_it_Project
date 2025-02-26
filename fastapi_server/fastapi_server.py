@@ -2,11 +2,9 @@ import uvicorn
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
-import shutil
 import os
 import logging
 from ultralytics import YOLO
-from typing import Dict, List, Optional
 from pathlib import Path
 
 # 로깅 설정

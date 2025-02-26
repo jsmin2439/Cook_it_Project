@@ -5,7 +5,7 @@ const { initializeFirebase, loadIngredientMap, getUserIngredients, findTopRecipe
 const { recommendTop3Recipes } = require("./openai");
 const { authMiddleware } = require('./auth');
 const { verifyLogin } = require('./auth');
-const { calculateMatchScore, getQuestionsAndResponses, calculateFMBT, saveFMBTResult } = require("./utils");
+const { getQuestionsAndResponses, calculateFMBT } = require("./utils");
 const axios = require('axios');
 const FormData = require('form-data');
 const FASTAPI_URL = process.env.FASTAPI_URL;

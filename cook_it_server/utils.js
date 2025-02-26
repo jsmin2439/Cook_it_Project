@@ -100,6 +100,5 @@ async function saveFMBTResult(userId, fmbtResult) {
 module.exports = {
     calculateMatchScore,
     getQuestionsAndResponses,
-    calculateFMBT,
-    saveFMBTResult
+    calculateFMBT
 };

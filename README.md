@@ -70,35 +70,4 @@
 ---
 
 
-## 📂 프로젝트 구조
-/CookIT_Project                 # 프로젝트 루트 디렉토리
-│── /frontend                   # Flutter 기반 모바일 애플리케이션 코드
-│   ├── lib                     # Flutter 주요 소스 코드 폴더
-│   │   ├── screens             # 앱의 주요 화면 UI 파일
-│   │   ├── widgets             # 재사용 가능한 UI 컴포넌트
-│   │   ├── services            # API 요청 및 데이터 처리 관련 코드
-│   │   ├── models              # 데이터 모델 정의 (예: 레시피, 사용자 정보)
-│   │   ├── main.dart           # Flutter 앱의 진입점
-│   ├── assets                  # 이미지, 아이콘 등 정적 파일 저장소
-│   ├── pubspec.yaml            # Flutter 패키지 및 설정 파일
-│
-│── /backend                    # Node.js 및 FastAPI 기반 백엔드 서버
-│   ├── server.js               # Node.js 서버 진입점
-│   ├── routes.js               # API 라우팅 관리
-│   ├── database.js             # Firebase와의 데이터 연동
-│   ├── controllers             # API 요청 처리 로직
-│   ├── services                # 주요 백엔드 로직 (레시피 추천, 이미지 분석 등)
-│   ├── /ai                     # AI 모델 관련 코드 (YOLOv8, ChatGPT)
-│   │   ├── yolo.py             # YOLOv8을 이용한 식재료 인식 코드
-│   │   ├── chatgpt.py          # ChatGPT API 연동 코드
-│   ├── package.json            # Node.js 종속성 및 설정 파일
-│
-│── /database                   # Firebase 및 데이터 관리
-│   ├── firebase-config.js      # Firebase 설정 파일
-│   ├── seed-data.json          # 초기 테스트 데이터
-│   ├── models                  # 데이터 모델 스키마 (사용자, 레시피 등)
-│
-│── README.md                   # 프로젝트 설명 및 실행 가이드
-│── LICENSE                     # 프로젝트 라이선스 파일
-│── .gitignore                   # Git에 포함되지 않을 파일 설정
 

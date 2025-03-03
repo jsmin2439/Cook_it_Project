@@ -1,5 +1,5 @@
 
-![단락 텍스트1](![cookit](https://github.com/user-attachments/assets/b6e81152-ffe8-4772-8e4e-15e599ddf0ad)
+![cookit](https://github.com/user-attachments/assets/b6e81152-ffe8-4772-8e4e-15e599ddf0ad)
 
 
 

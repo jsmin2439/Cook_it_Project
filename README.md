@@ -71,5 +71,22 @@
 
 ---
 
+### 🖥️ 시스템 구성도 
+
+
+![시스템 구성도](https://github.com/user-attachments/assets/5dc580d9-d024-477b-b29a-0f0b28811f8d)
+
+
+---
+
+### 👨‍🍳➡️📲➡️🍲 시스템 수행 시나리오
+
+
+![시나리오](https://github.com/user-attachments/assets/1b38d87d-108b-4bba-a59d-f6de9c35f6c1)
+
+
+
+
+
 
 

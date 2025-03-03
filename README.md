@@ -74,7 +74,8 @@
 ### 🖥️ 시스템 구성도 
 
 
-![시스템 구성도](https://github.com/user-attachments/assets/7973824e-1c15-475f-b1f0-c265a112d505)
+![시스템 구성도 수정](https://github.com/user-attachments/assets/3fcb49dc-39a7-4d4e-b6aa-1cedce56aed4)
+
 
 
 ---

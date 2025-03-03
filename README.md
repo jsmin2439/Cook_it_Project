@@ -22,7 +22,9 @@
 이 프로젝트는 **Flutter, Node.js, FastAPI, Firebase**를 활용하여 개발되었으며,  
 **YOLOv8 모델**을 통한 **식재료 인식** 및 **ChatGPT 기반 레시피 추천** 기능을 포함하고 있습니다.
 
+
 ---
+
 
 ## 🎯 핵심 기능
 ### ✅ **1. AI 맞춤형 레시피 추천**
@@ -47,7 +49,9 @@
 - **사용자가 직접 레시피 수정 가능**
 - **레시피를 저장하고 커뮤니티에서 공유 가능**
 
+
 ---
+
 
 ## 🛠️ 기술 스택
 | **구분** | **기술** |
@@ -59,6 +63,8 @@
 | **API** | Google Cloud API, Mediapipe API |
 | **개발 도구** | Android Studio, VS Code, PyCharm, WebStorm, Postman, Google Colab |
 
+
 ---
+
 
 ## 📂 프로젝트 구조

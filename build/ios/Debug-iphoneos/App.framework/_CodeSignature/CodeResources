@@ -10,11 +10,11 @@
 		</data>
 		<key>flutter_assets/AssetManifest.bin</key>
 		<data>
-		H/1raWTYTXoKIV0j8LwJtXlrv6k=
+		O9riXBpFkvm0FVDbsySVcGsPHus=
 		</data>
 		<key>flutter_assets/AssetManifest.json</key>
 		<data>
-		h9nYDn3qmPWnU/vkloHf1Ba3Uig=
+		FVwevxAdthQHwaIefdQ+TUASoO4=
 		</data>
 		<key>flutter_assets/FontManifest.json</key>
 		<data>
@@ -22,7 +22,7 @@
 		</data>
 		<key>flutter_assets/NOTICES.Z</key>
 		<data>
-		O/5v8qKBZH+iNQYgk4pJfq5O+X4=
+		Efdr114Pnom0eGAaoY2O9S6zK5k=
 		</data>
 		<key>flutter_assets/NativeAssetsManifest.json</key>
 		<data>
@@ -40,9 +40,17 @@
 		<data>
 		vGYeXpGUQQc+Ili0i6AIgMStgfM=
 		</data>
+		<key>flutter_assets/assets/images/cookbook.png</key>
+		<data>
+		ZgJ+7e7LsDK6Px1VSekGjvEq6BU=
+		</data>
 		<key>flutter_assets/assets/images/cookie.png</key>
 		<data>
 		Lmvd9YS/a+jtB6LPDqo6qlBa97M=
+		</data>
+		<key>flutter_assets/assets/images/empty_fridge.png</key>
+		<data>
+		UUO2o1tEd2Ias+9oME9XtP4Os3w=
 		</data>
 		<key>flutter_assets/fonts/MaterialIcons-Regular.otf</key>
 		<data>
@@ -50,11 +58,11 @@
 		</data>
 		<key>flutter_assets/isolate_snapshot_data</key>
 		<data>
-		FVx++zOu9bfCYBRb308QfQDOwg8=
+		xAQKkI2UinV0JWx5xxbDCHz3X3E=
 		</data>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<data>
-		YW1l8p9UshMwc+hpuIo/r+o/atU=
+		c4NNQ5wRIkAnyZsf2lVfeTHfNz0=
 		</data>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -62,11 +70,11 @@
 		</data>
 		<key>flutter_assets/shaders/ink_sparkle.frag</key>
 		<data>
-		VoVnsu58hN7wrwazX0nyAopiB0Q=
+		VvTF10G1gIeea4aI0DhJjCjHgXQ=
 		</data>
 		<key>flutter_assets/vm_snapshot_data</key>
 		<data>
-		TvgK5LRkti9en0oDi732Tp3Hm+8=
+		0v5R75w7dZrTnADFlExp0fkh2B8=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -75,14 +83,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			tM3TGfBhNB3LHqitpplGOIchRxqrcVAaAw26P1kUkPU=
+			DYiFSFcHJDVLPfTo0N0h8H3FSDhK44OtQvt0Xn2ysKw=
 			</data>
 		</dict>
 		<key>flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			idSbHkeyQ9yhVH7mt672/Wj2RyjVFnI+g2wDT+vlqfE=
+			q34mwVL5jQ6lc/n/LbJpfBDDiiGz0JM9F4WCAnRD1Fo=
 			</data>
 		</dict>
 		<key>flutter_assets/FontManifest.json</key>
@@ -96,7 +104,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			4DfgQCccFSP+hnfXCGTQw2nRIlwAf6gkpFdrwRGGWls=
+			8oqnxLgPkpFq9WSbvPTdG04m4r3v/H0ypmRN8T5mscQ=
 			</data>
 		</dict>
 		<key>flutter_assets/NativeAssetsManifest.json</key>
@@ -127,11 +135,25 @@
 			c3sBYw43NCrfimsPhpApm+MLCxBlagzg5Dgbsz/cIAs=
 			</data>
 		</dict>
+		<key>flutter_assets/assets/images/cookbook.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ApTN42kur8szqatZo5869Z/jdqmQhZWZUM08WM7MoQU=
+			</data>
+		</dict>
 		<key>flutter_assets/assets/images/cookie.png</key>
 		<dict>
 			<key>hash2</key>
 			<data>
 			gxauzJ6yJz4jfxjhRa9NEgSMkUi5RE0UERjT3s3zSPY=
+			</data>
+		</dict>
+		<key>flutter_assets/assets/images/empty_fridge.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ZC9b7pXIAJMIM+hPDrL2UeA8wvf3V+HJDzM9hUJz37Y=
 			</data>
 		</dict>
 		<key>flutter_assets/fonts/MaterialIcons-Regular.otf</key>
@@ -145,14 +167,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Mwsc4fu+1pzVhMOLlSSdIAA6S58O64iFX63q6YQrFPg=
+			SD6mDv/e1M0keL5s1k88vGrzFM+XNJBD2oIROrszGs8=
 			</data>
 		</dict>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			fND+alzOLI40TIbiXE/aW/bQ+t7aL7kYBdmyHxiLzxo=
+			Pzk7JA70n/Mnh+l6jb75RtdEMzE/AlwJLgbxronaPEE=
 			</data>
 		</dict>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
@@ -166,14 +188,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			4PC1vOWKHlNOnW4dGwFfD4TPwBCllniPCsOy7+1X5co=
+			TGVjYgE+Oyl6guvhhPPrWfynkxkJeFjSzSLsQqn7Q3M=
 			</data>
 		</dict>
 		<key>flutter_assets/vm_snapshot_data</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			OlVlpArXIYOkXAGy5X4/px6ff6etODvvaJH9MWuf73s=
+			kKLe5WjtuDRn13TPKFWqD5vaUoUXErhEJlhAklbcq4U=
 			</data>
 		</dict>
 	</dict>

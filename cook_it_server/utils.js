@@ -8,18 +8,39 @@ function getStringSimilarity(str1, str2) {
     return 1 - distance / maxLength;
 }
 
-// 사용자의 재료와 레시피 재료 매칭도 계산 함수
+// Jaccard 유사도 함수 (새로 추가)
+function jaccardSimilarity(str1, str2) {
+    const tokenize = s => new Set(s.toLowerCase().split(/\s+/));
+    const set1 = tokenize(str1);
+    const set2 = tokenize(str2);
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
+    return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
+// 혼합 유사도 함수 (새로 추가)
+function hybridSimilarity(str1, str2, alpha = 0.5) {
+    const levSim = getStringSimilarity(str1, str2);
+    const jacSim = jaccardSimilarity(str1, str2);
+    return alpha * jacSim + (1 - alpha) * levSim;
+}
+
+// 사용자의 재료와 레시피 재료 매칭도 계산 함수 (수정됨)
 function calculateMatchScore(userIngredients, recipeIngredients) {
-    let matchedCount = 0;
+    let totalScore = 0;
+
     recipeIngredients.forEach((recipeIngredient) => {
+        let bestSim = 0;
         userIngredients.forEach((userIngredient) => {
-            const similarity = getStringSimilarity(recipeIngredient, userIngredient);
-            if (similarity > 0.8) {
-                matchedCount += 1;
+            const sim = hybridSimilarity(recipeIngredient, userIngredient);
+            if (sim > bestSim) {
+                bestSim = sim;
             }
         });
+        totalScore += bestSim;
     });
-    return matchedCount / recipeIngredients.length;
+
+    return totalScore / recipeIngredients.length;
 }
 
 async function getQuestionsAndResponses(userId) {

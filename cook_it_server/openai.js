@@ -66,6 +66,15 @@ async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
                     - 싫어하는 식재료: ${disliked_ingredients.join(", ")}
                     - 알레르기 식재료: ${allergic_ingredients.join(", ")}
                     - FMBT 유형: ${userFMBT}
+                     사용자 FMBT별 특징:
+                    - E (Exploratory): 새로운 음식 시도 좋아함
+                    - C (Conservative): 익숙한 음식 선호
+                    - F (Fast): 빠른 식사 패턴
+                    - S (Slow): 천천히 식사하는 패턴
+                    - S (Solo): 혼밥을 선호
+                    - G (Group): 단체 식사 선호
+                    - B (Bold): 강한 맛, 매운맛 선호
+                    - M (Mild): 순한 맛, 건강식 선호
 
                     레시피 목록:
                     ${JSON.stringify(simplifiedRecipes, null, 1)}

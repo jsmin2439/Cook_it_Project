@@ -104,7 +104,7 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
             return res.status(404).json({ error: "매칭되는 레시피가 없습니다." });
         }
 
-        const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes, userFMBT);
+        const recommendedRecipes = await recommendTop3Recipes(userIngredients, topRecipes, userFMBT, userId);
         if (!recommendedRecipes || recommendedRecipes.length === 0) {
             return res.status(404).json({ error: "추천 레시피를 찾을 수 없습니다." });
         }
@@ -177,6 +177,149 @@ router.post("/recommend-recipes", authMiddleware,async (req, res) => {
         console.error("레시피 추천 오류:", error);
         // 상세 에러 메시지 숨기기
         res.status(500).json({ error: "레시피 추천 중 오류가 발생했습니다." });
+    }
+});
+
+// routes.js 파일에 새로운 라우트 추가
+router.post("/save-recipe", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const { recipeId } = req.body;
+
+        if (!recipeId) {
+            return res.status(400).json({ error: "레시피 ID가 필요합니다." });
+        }
+
+        const db = admin.firestore();
+
+        // 레시피 문서 조회
+        const recipeDoc = await db.collection("recipes").doc(recipeId).get();
+
+        if (!recipeDoc.exists) {
+            return res.status(404).json({ error: "레시피를 찾을 수 없습니다." });
+        }
+
+        const recipeData = recipeDoc.data();
+
+        // 사용자 문서에 저장된 레시피 배열 업데이트
+        const userRef = db.collection("user").doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: "사용자 정보를 찾을 수 없습니다." });
+        }
+
+        // 현재 저장된 레시피 목록 가져오기
+        const savedRecipes = userDoc.data().savedRecipes || [];
+
+        // 이미 저장된 레시피인지 확인
+        const isAlreadySaved = savedRecipes.some(recipe => recipe.RCP_SEQ === recipeData.RCP_SEQ);
+
+        if (isAlreadySaved) {
+            return res.json({
+                success: true,
+                message: "이미 저장된 레시피입니다."
+            });
+        }
+
+        // 저장 시간 추가
+        const recipeWithTimestamp = {
+            ...recipeData,
+            savedAt: new Date().toISOString()
+        };
+
+        // 새로운 레시피를 포함한 전체 배열 업데이트
+        const updatedRecipes = [...savedRecipes, recipeWithTimestamp];
+
+        // 사용자 문서 업데이트
+        await userRef.update({
+            savedRecipes: updatedRecipes
+        });
+
+        res.json({
+            success: true,
+            message: "레시피가 성공적으로 저장되었습니다."
+        });
+
+    } catch (error) {
+        console.error("레시피 저장 오류:", error);
+        res.status(500).json({ error: "레시피 저장 중 오류가 발생했습니다." });
+    }
+});
+
+// 저장된 레시피 목록 조회 라우트 추가
+router.get("/saved-recipes", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const db = admin.firestore();
+
+        const userDoc = await db.collection("user").doc(userId).get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: "사용자 정보를 찾을 수 없습니다." });
+        }
+
+        const savedRecipes = userDoc.data().savedRecipes || [];
+
+        // 최신 저장 순으로 정렬
+        const sortedRecipes = [...savedRecipes].sort((a, b) => {
+            const timeA = a.savedAt ? a.savedAt.toDate().getTime() : 0;
+            const timeB = b.savedAt ? b.savedAt.toDate().getTime() : 0;
+            return timeB - timeA;
+        });
+
+        res.json({
+            success: true,
+            savedRecipes: sortedRecipes
+        });
+
+    } catch (error) {
+        console.error("저장된 레시피 조회 오류:", error);
+        res.status(500).json({ error: "저장된 레시피 조회 중 오류가 발생했습니다." });
+    }
+});
+
+// 저장된 레시피 삭제 라우트 추가
+router.delete("/saved-recipe/:recipeId", authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const { recipeId } = req.params;
+
+        if (!recipeId) {
+            return res.status(400).json({ error: "레시피 ID가 필요합니다." });
+        }
+
+        const db = admin.firestore();
+        const userRef = db.collection("user").doc(userId);
+        const userDoc = await userRef.get();
+
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: "사용자 정보를 찾을 수 없습니다." });
+        }
+
+        const savedRecipes = userDoc.data().savedRecipes || [];
+        const recipeToDelete = savedRecipes.find(recipe => recipe.RCP_SEQ === recipeId);
+
+        if (!recipeToDelete) {
+            return res.status(404).json({ error: "저장된 레시피를 찾을 수 없습니다." });
+        }
+
+        // 해당 레시피만 제외한 배열 생성
+        const updatedRecipes = savedRecipes.filter(recipe => recipe.RCP_SEQ !== recipeId);
+
+        // 사용자 문서 업데이트
+        await userRef.update({
+            savedRecipes: updatedRecipes
+        });
+
+        res.json({
+            success: true,
+            message: "레시피가 성공적으로 삭제되었습니다."
+        });
+
+    } catch (error) {
+        console.error("레시피 삭제 오류:", error);
+        res.status(500).json({ error: "레시피 삭제 중 오류가 발생했습니다." });
     }
 });
 

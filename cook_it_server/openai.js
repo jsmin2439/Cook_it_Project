@@ -1,4 +1,5 @@
 const OpenAI = require("openai");
+const admin = require("firebase-admin");
 const { getDb } = require('./firebase');
 
 let openai;
@@ -12,8 +13,8 @@ function initializeOpenAI() {
 }
 
 // GPT-4를 사용하여 최종 레시피 3개 추천 함수
-async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
-    if (!userIngredients || !userIngredients.ingredients || !topRecipes) {
+async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT, userId) {
+    if (!userIngredients || !userIngredients.ingredients || !topRecipes || !userId) {
         throw new Error('유효하지 않은 입력 데이터입니다.');
     }
     const db = getDb();  // db 객체 가져오기
@@ -23,7 +24,26 @@ async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
     try {
         const { ingredients, disliked_ingredients, allergic_ingredients } = userIngredients;
 
-        const simplifiedRecipes = topRecipes.map((recipe) => ({
+        // 사용자의 이전 추천 레시피 ID 가져오기
+        const userDoc = await db.collection("user").doc(userId).get();
+        const previousRecommendations = userDoc.exists && userDoc.data().recommendedRecipes
+            ? userDoc.data().recommendedRecipes
+            : [];
+
+        // 이전 추천 시간 가져오기
+        const previousRecommendationTimes = userDoc.exists && userDoc.data().recommendedRecipeTimes
+            ? userDoc.data().recommendedRecipeTimes
+            : [];
+
+        // 이전에 추천된 레시피를 제외한 목록 생성
+        const filteredRecipes = topRecipes.filter(recipe =>
+            !previousRecommendations.includes(recipe.id)
+        );
+
+        // 필터링 후 레시피가 6개 미만이면 모든 레시피 사용
+        const recipesToRecommend = filteredRecipes.length >= 6 ? filteredRecipes : topRecipes;
+
+        const simplifiedRecipes = recipesToRecommend.map((recipe) => ({
             id: recipe.id,
             name: recipe.name,
             matchScore: recipe.matchScore,
@@ -56,7 +76,8 @@ async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
                         "2. 싫어하는 식재료가 포함된 레시피는 가능한 제외\n" +
                         "3. 재료 매칭도를 우선적으로 고려\n" +
                         "4. 사용자의 FMBT 취향을 고려\n" +
-                        "5. 카테고리 다양성 고려"
+                        "5. 카테고리 다양성 고려\n" +
+                        "6. 이전에 추천된 레시피(isPreviouslyRecommended: true)는 가능한 제외"
                 },
                 {
                     role: "user",
@@ -103,6 +124,31 @@ async function recommendTop3Recipes(userIngredients, topRecipes, userFMBT) {
         });
 
         const recommendations = JSON.parse(gptResponse.choices[0].message.content);
+
+        // 추천 레시피 ID 추출
+        const newRecommendedRecipeIds = recommendations.recommendedRecipes.map(rec => rec.id);
+
+        // 현재 시간 타임스탬프 생성
+        const now = admin.firestore.Timestamp.now();
+        const newRecommendedTimes = newRecommendedRecipeIds.map(() => now);
+
+        // 이전 추천과 새 추천을 합쳐서 최대 6개 유지
+        let updatedRecipeIds = [...previousRecommendations, ...newRecommendedRecipeIds];
+        let updatedRecipeTimes = [...previousRecommendationTimes, ...newRecommendedTimes];
+
+        // 6개를 초과하면 오래된 것부터 제거 (앞에서부터 자르기)
+        if (updatedRecipeIds.length > 6) {
+            const excessCount = updatedRecipeIds.length - 6;
+            updatedRecipeIds = updatedRecipeIds.slice(excessCount);
+            updatedRecipeTimes = updatedRecipeTimes.slice(excessCount);
+        }
+
+        // 사용자 문서에 추천 레시피 ID 저장
+        await db.collection("user").doc(userId).update({
+            recommendedRecipes: updatedRecipeIds,
+            recommendedRecipeTimes: updatedRecipeTimes,
+            recommendedAt: admin.firestore.Timestamp.now()
+        });
 
         const recommendedRecipesData = await Promise.all(
             recommendations.recommendedRecipes.map(async (recommendation) => {

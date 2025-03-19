@@ -46,10 +46,10 @@ class AppDelegate: FlutterAppDelegate {
   
   private func attachCameraView(to flutterViewController: FlutterViewController) {
     let screenBounds = UIScreen.main.bounds
-    let cameraHeight = screenBounds.height * 0// 50% 높이 (원래 0으로 되어 있던 오타 수정)
+    let cameraHeight = screenBounds.height
     let cameraFrame = CGRect(
       x: 0,
-      y: screenBounds.height - cameraHeight,
+      y: screenBounds.height - cameraHeight * 0,
       width: screenBounds.width,
       height: cameraHeight
     )

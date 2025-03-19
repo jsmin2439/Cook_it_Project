@@ -50,6 +50,10 @@
 	<string>카메라 사용을 위해 권한이 필요합니다.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>We need access to the microphone for audio recording purposes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+<string>사진을 선택하여 앱에서 사용할 수 있도록 접근 권한이 필요합니다.</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>선택한 사진을 앱에서 저장할 수 있도록 권한이 필요합니다.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

@@ -279,14 +279,14 @@ router.get("/saved-recipes", authMiddleware, async (req, res) => {
     }
 });
 
-// 저장된 레시피 삭제 라우트 추가
-router.delete("/saved-recipe/:recipeId", authMiddleware, async (req, res) => {
+// 저장된 레시피 삭제 라우트를 인덱스 기반으로 수정
+router.delete("/saved-recipe/:index", authMiddleware, async (req, res) => {
     try {
         const userId = req.user.uid;
-        const { recipeId } = req.params;
+        const index = parseInt(req.params.index);
 
-        if (!recipeId) {
-            return res.status(400).json({ error: "레시피 ID가 필요합니다." });
+        if (isNaN(index) || index < 0) {
+            return res.status(400).json({ error: "유효한 인덱스가 필요합니다." });
         }
 
         const db = admin.firestore();
@@ -298,14 +298,13 @@ router.delete("/saved-recipe/:recipeId", authMiddleware, async (req, res) => {
         }
 
         const savedRecipes = userDoc.data().savedRecipes || [];
-        const recipeToDelete = savedRecipes.find(recipe => recipe.RCP_SEQ === recipeId);
 
-        if (!recipeToDelete) {
-            return res.status(404).json({ error: "저장된 레시피를 찾을 수 없습니다." });
+        if (index >= savedRecipes.length) {
+            return res.status(404).json({ error: "해당 인덱스에 레시피가 존재하지 않습니다." });
         }
 
-        // 해당 레시피만 제외한 배열 생성
-        const updatedRecipes = savedRecipes.filter(recipe => recipe.RCP_SEQ !== recipeId);
+        // 해당 인덱스 제외한 새 배열 생성
+        const updatedRecipes = [...savedRecipes.slice(0, index), ...savedRecipes.slice(index + 1)];
 
         // 사용자 문서 업데이트
         await userRef.update({
@@ -320,6 +319,107 @@ router.delete("/saved-recipe/:recipeId", authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("레시피 삭제 오류:", error);
         res.status(500).json({ error: "레시피 삭제 중 오류가 발생했습니다." });
+    }
+});
+
+router.post("/smart-search", async (req, res) => {
+    try {
+        const { searchQuery = "" } = req.body;
+
+        // 유효성 검사
+        if (!searchQuery || searchQuery.trim() === "") {
+            return res.status(400).json({ error: "검색어를 입력해주세요." });
+        }
+
+        // 검색어 전처리
+        const query = searchQuery.trim();
+
+        const db = admin.firestore();
+
+        // 1. 알려진 식재료인지 확인 (ingredients.csv의 데이터 활용)
+        // ingredientMap에서 역방향 매핑 생성 (한글 식재료명 -> 존재 여부)
+        const knownIngredients = Object.values(ingredientMap).reduce((acc, name) => {
+            if (name) acc[name] = true;
+            return acc;
+        }, {});
+
+        // 검색어를 공백 기준으로 분리
+        const terms = query.split(/\s+/);
+
+        // 알려진 식재료 목록과 일반 검색어 분리
+        const foundIngredients = [];
+        const generalTerms = [];
+
+        terms.forEach(term => {
+            if (knownIngredients[term]) {
+                foundIngredients.push(term);
+            } else {
+                generalTerms.push(term);
+            }
+        });
+
+        // 일반 검색어 합치기
+        const remainingQuery = generalTerms.join(" ");
+
+        console.log("식재료로 인식:", foundIngredients);
+        console.log("일반 검색어:", remainingQuery);
+
+        // 레시피 컬렉션 조회
+        const recipesRef = db.collection("recipes");
+        const snapshot = await recipesRef.get();
+
+        const matchingRecipes = [];
+        snapshot.forEach(doc => {
+            const recipe = doc.data();
+            let match = false;
+            let ingredientMatchCount = 0;
+            let nameMatchScore = 0;
+
+            // 식재료 일치 여부 확인
+            if (foundIngredients.length > 0) {
+                const recipeIngredients = recipe.RCP_PARTS_DTLS || "";
+                ingredientMatchCount = foundIngredients.filter(ingredient =>
+                    recipeIngredients.includes(ingredient)
+                ).length;
+                if (ingredientMatchCount > 0) match = true;
+            }
+
+            // 일반 검색어로 레시피 이름 검색
+            if (remainingQuery) {
+                const name = recipe.RCP_NM || "";
+                if (name.includes(remainingQuery)) {
+                    match = true;
+                    nameMatchScore = 100; // 이름 일치는 높은 점수 부여
+                }
+            }
+
+            // 검색어가 빈 문자열일 경우 모든 식재료가 일치했다면 포함
+            if ((remainingQuery === "" && foundIngredients.length > 0 && ingredientMatchCount > 0) || match) {
+                matchingRecipes.push({
+                    ...recipe,
+                    ingredientMatchCount,
+                    nameMatchScore,
+                    totalMatchScore: ingredientMatchCount + nameMatchScore
+                });
+            }
+        });
+
+        // 총 검색 점수 기준으로 정렬
+        matchingRecipes.sort((a, b) => b.totalMatchScore - a.totalMatchScore);
+
+        // 결과 반환
+        res.json({
+            success: true,
+            searchInfo: {
+                detectedIngredients: foundIngredients,
+                searchTerms: remainingQuery ? [remainingQuery] : []
+            },
+            recipes: matchingRecipes
+        });
+
+    } catch (error) {
+        console.error("스마트 검색 오류:", error);
+        res.status(500).json({ error: "검색 중 오류가 발생했습니다." });
     }
 });
 

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
 import 'login_screen.dart';
 import 'my_fridge_page.dart';
 import 'search_screen.dart';
@@ -110,15 +109,13 @@ class _MainScreenState extends State<MainScreen> {
         unselectedItemColor: Colors.black54,
         type: BottomNavigationBarType.fixed,
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: '카테고리'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: '검색'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined), label: 'Home'),
+              icon: Icon(Icons.favorite_border), label: '저장'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.grid_view), label: 'Category'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border), label: 'Heart'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.people_alt_outlined), label: 'Comm'),
+              icon: Icon(Icons.people_alt_outlined), label: '커뮤니티'),
         ],
       ),
     );
@@ -134,19 +131,13 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             // 상단 앱바 부분
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Row(
                 children: [
                   Row(
                     children: [
-                      Image.asset('assets/images/cookie.png',
-                          width: 50, height: 50),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Cook it',
-                        style: TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.bold),
-                      ),
+                      Image.asset('assets/images/CookIT.png',
+                          width: 100, height: 50),
                     ],
                   ),
                   const Spacer(),

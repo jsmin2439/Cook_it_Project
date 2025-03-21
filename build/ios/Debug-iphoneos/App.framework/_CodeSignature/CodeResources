@@ -10,11 +10,11 @@
 		</data>
 		<key>flutter_assets/AssetManifest.bin</key>
 		<data>
-		O9riXBpFkvm0FVDbsySVcGsPHus=
+		kw2utoHaFdbZbYE5ARPPPFMO4lw=
 		</data>
 		<key>flutter_assets/AssetManifest.json</key>
 		<data>
-		FVwevxAdthQHwaIefdQ+TUASoO4=
+		FbuEAG1X8eZMhMJwqXALc4EvPHU=
 		</data>
 		<key>flutter_assets/FontManifest.json</key>
 		<data>
@@ -22,7 +22,7 @@
 		</data>
 		<key>flutter_assets/NOTICES.Z</key>
 		<data>
-		w8L+LYVg01e1voQ+wDGGd0FBxjk=
+		v90p3U50fGNjtxAZI9XH9Z7v2CI=
 		</data>
 		<key>flutter_assets/NativeAssetsManifest.json</key>
 		<data>
@@ -39,6 +39,10 @@
 		<key>flutter_assets/assets/images/%EB%B6%80%EB%93%9C%EB%9F%AC%EC%9A%B4_%ED%81%AC%EB%A6%BC_%ED%8C%8C%EC%8A%A4%ED%83%80.jpg</key>
 		<data>
 		vGYeXpGUQQc+Ili0i6AIgMStgfM=
+		</data>
+		<key>flutter_assets/assets/images/CookIT.png</key>
+		<data>
+		vHJfuxhJBkC145osYWXuBYO7wWY=
 		</data>
 		<key>flutter_assets/assets/images/cookbook.png</key>
 		<data>
@@ -62,7 +66,7 @@
 		</data>
 		<key>flutter_assets/kernel_blob.bin</key>
 		<data>
-		76X+rdHpnOUxBLt8rMUG5WRA+e8=
+		jrkLZMgCHxev/GHB+1rXrUCmty0=
 		</data>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>
 		<data>
@@ -83,14 +87,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			DYiFSFcHJDVLPfTo0N0h8H3FSDhK44OtQvt0Xn2ysKw=
+			c3Hnxb0eCVsWMAVBwEdkfFHGFpa6qgGtgxwJtynt3a4=
 			</data>
 		</dict>
 		<key>flutter_assets/AssetManifest.json</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			q34mwVL5jQ6lc/n/LbJpfBDDiiGz0JM9F4WCAnRD1Fo=
+			5eFQxgyqMFVl9AW/W4srx0ayALoIlBuH6xfqr2dtpfQ=
 			</data>
 		</dict>
 		<key>flutter_assets/FontManifest.json</key>
@@ -104,7 +108,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			4405PJ+KYepvAQWLqNxfXJ4pIVG26J1pGvVY6JTXNGQ=
+			4ZRGOyyaOiBqadWB7C3PBYKH6A4GqIjAmH2iIhDJbWg=
 			</data>
 		</dict>
 		<key>flutter_assets/NativeAssetsManifest.json</key>
@@ -133,6 +137,13 @@
 			<key>hash2</key>
 			<data>
 			c3sBYw43NCrfimsPhpApm+MLCxBlagzg5Dgbsz/cIAs=
+			</data>
+		</dict>
+		<key>flutter_assets/assets/images/CookIT.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			ggxkWcEoxzDO203stiDR8cMqiVl1zcViDqX6r/L7cIA=
 			</data>
 		</dict>
 		<key>flutter_assets/assets/images/cookbook.png</key>
@@ -174,7 +185,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			Lgj7KJmcyjBkJISTAuJE+ZtTDn8NRDei6JiheH5Tz1Y=
+			/C5qqviPRR8DMaI4Rbj09LPeajquXbH+A7uPGWv93Pw=
 			</data>
 		</dict>
 		<key>flutter_assets/packages/cupertino_icons/assets/CupertinoIcons.ttf</key>

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
+import 'package:heif_converter/heif_converter.dart';
+import 'package:image/image.dart' as img; // pubspec.yaml에 image ^3.2.3 이상 추가
+import 'package:path_provider/path_provider.dart';
 
 class EditRecipeBook extends StatefulWidget {
   final String userId;
@@ -130,15 +133,58 @@ class _EditRecipeBookState extends State<EditRecipeBook> {
   //--------------------------------------------------------------------------
   // 3) 앨범에서 새 이미지를 가져와 **Firebase Storage 업로드 후** URL 저장
   //--------------------------------------------------------------------------
+  // HEIF → JPEG 변환 함수
   Future<void> _pickImageFromGallery(int stepIndex) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked == null) return;
 
-    // (A) 임시 로컬 파일 경로
-    final localFile = File(picked.path);
+    // 원본 파일
+    final File originalFile = File(picked.path);
+    File imageFile = originalFile;
 
-    // (B) Firebase Storage에 업로드 (폴더 구조 예시: recipes/userId/timestamp.jpg)
+    // 확장자 확인
+    final String extension = picked.path.split('.').last.toLowerCase();
+
+    // HEIF/HEIC → JPEG 변환
+    if (extension == 'heic' || extension == 'heif') {
+      try {
+        final String? jpegPath = await HeifConverter.convert(picked.path);
+        if (jpegPath != null) {
+          imageFile = File(jpegPath);
+        } else {
+          throw "HEIF/HEIC 변환 실패";
+        }
+      } catch (e) {
+        debugPrint("HEIF 변환 오류: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("이미지 변환 실패: $e")),
+        );
+        return;
+      }
+    }
+
+    // ****************************************************
+    // 1) image 라이브러리로 다시 sRGB JPEG로 인코딩
+    // ****************************************************
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+      if (decodedImage != null) {
+        final sRgbBytes = img.encodeJpg(decodedImage, quality: 100);
+        // 임시 경로 예: /tmp/converted_1691234567890.jpg
+        final tempPath =
+            '${(await getTemporaryDirectory()).path}/converted_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final reEncodedFile = File(tempPath)..writeAsBytesSync(sRgbBytes);
+        imageFile = reEncodedFile; // 업데이트된 sRGB JPEG 파일
+      }
+    } catch (e) {
+      debugPrint("sRGB 재인코딩 오류: $e");
+    }
+
+    // ****************************************************
+    // 2) Firebase Storage 업로드
+    // ****************************************************
     try {
       final storageRef = firebase_storage.FirebaseStorage.instance
           .ref()
@@ -146,16 +192,21 @@ class _EditRecipeBookState extends State<EditRecipeBook> {
           .child(widget.userId)
           .child('${DateTime.now().millisecondsSinceEpoch}.jpg');
 
-      // 업로드
-      await storageRef.putFile(localFile);
+      await storageRef.putFile(imageFile);
 
-      // 다운로드 URL 획득
       final downloadUrl = await storageRef.getDownloadURL();
-
-      // (C) 해당 단계 컨트롤러에 URL 반영
       setState(() {
         _manualImgControllers[stepIndex].text = downloadUrl;
       });
+
+      // 임시 파일 정리
+      if (imageFile.path != originalFile.path) {
+        try {
+          await imageFile.delete();
+        } catch (e) {
+          debugPrint("임시 파일 삭제 오류: $e");
+        }
+      }
     } catch (e) {
       debugPrint("이미지 업로드 오류: $e");
       ScaffoldMessenger.of(context).showSnackBar(

@@ -396,6 +396,7 @@ router.post("/smart-search", async (req, res) => {
             // 검색어가 빈 문자열일 경우 모든 식재료가 일치했다면 포함
             if ((remainingQuery === "" && foundIngredients.length > 0 && ingredientMatchCount > 0) || match) {
                 matchingRecipes.push({
+                    id: doc.id,
                     ...recipe,
                     ingredientMatchCount,
                     nameMatchScore,

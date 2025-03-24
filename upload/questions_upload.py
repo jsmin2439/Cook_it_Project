@@ -10,7 +10,7 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # 🔹 JSON 파일 로드
-with open("questions.json", "r", encoding="utf-8") as file:
+with open("../data/questions.json", "r", encoding="utf-8") as file:
     questions_data = json.load(file)
 
 # 🔹 Firestore에 데이터 저장 함수

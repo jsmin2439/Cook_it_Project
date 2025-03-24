@@ -104,10 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const SizedBox(height: 40),
-                  const Text(
-                    "Cook it !!",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
+                  Image.asset('assets/images/CookIT.png',
+                      width: 180, height: 50),
                   const SizedBox(height: 40),
                   _buildInputField(
                     controller: _emailController,

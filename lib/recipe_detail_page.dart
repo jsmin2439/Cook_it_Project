@@ -132,7 +132,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   //--------------------------------------------------------------------------
-  // 4) 하트 아이콘 눌렀을 때 토글
+  // 4) 북마크 아이콘 눌렀을 때 토글
   //--------------------------------------------------------------------------
   void _toggleFavorite() {
     if (_isFavorited) {
@@ -166,6 +166,17 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   //--------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final recipe = widget.recipeData;
+
+    // "후식", "밥", "반찬" 등 RCP_PAT2
+    final category = recipe["RCP_PAT2"] ?? "카테고리 정보 없음";
+    // "기타", "볶기" 등 RCP_WAY2
+    final cookingWay = recipe["RCP_WAY2"] ?? "조리방법 정보 없음";
+    // 추천 사유
+    final recommendReason = recipe["recommendReason"] ?? "";
+    // 영양 팁 or 레시피 팁
+    final recipeTip = recipe["RCP_NA_TIP"] ?? "";
+
     return Scaffold(
       backgroundColor: kBackgroundColor,
       appBar: AppBar(
@@ -175,20 +186,12 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          children: [
-            Image.asset('assets/images/cookie.png', width: 40, height: 40),
-            const SizedBox(width: 8),
-            const Text(
-              'Cook it',
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
         actions: [
+          // 공유 아이콘
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.black),
+            onPressed: _handleShare,
+          ),
           // (A) showEditIcon == true 인 경우에만 편집 아이콘
           if (widget.showEditIcon)
             IconButton(
@@ -198,7 +201,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           // (B) 즐겨찾기 아이콘
           IconButton(
             icon: Icon(
-              _isFavorited ? Icons.favorite : Icons.favorite_border,
+              _isFavorited ? Icons.bookmark : Icons.bookmark_border,
               color: _isFavorited ? Colors.redAccent : Colors.black,
             ),
             onPressed: _toggleFavorite,
@@ -223,34 +226,168 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
           // 레시피 재료 문자열 -> 리스트
           final rawIngredients =
-              _processIngredients(widget.recipeData["RCP_PARTS_DTLS"] ?? "");
+              _processIngredients(recipe["RCP_PARTS_DTLS"] ?? "");
           final categorized =
               _categorizeIngredients(rawIngredients, myIngredients);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildRecipeImage(),
-                _buildRecipeHeader(),
-                _buildIngredientSection(
-                  title: '보유 재료',
-                  ingredients: categorized['owned']!,
-                  icon: Icons.check_circle,
-                  color: Colors.green,
+          return Column(
+            children: [
+              // (1) 스크롤되는 콘텐츠
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 레시피 메인 이미지
+                      _buildRecipeImage(),
+                      const SizedBox(height: 16),
+
+                      // 레시피명
+                      _buildRecipeTitle(recipe["RCP_NM"] ?? "No Title"),
+
+                      // 세련된 정보 카드: category, cookingWay, recommendReason
+                      _buildMetaSection(category, cookingWay),
+                      const SizedBox(height: 24),
+
+                      // AI 추천 이유
+                      if (recommendReason.isNotEmpty)
+                        _buildInfoCard(
+                          icon: Icons.auto_awesome,
+                          title: "AI 추천 이유",
+                          content: recommendReason,
+                          color: Colors.blue[100]!,
+                          iconColor: Colors.blue,
+                        ),
+
+                      // 레시피 팁 (RCP_NA_TIP)
+                      if (recipeTip.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: _buildTipCard(recipeTip),
+                        ),
+
+                      // 보유 재료 / 필요 재료
+                      _buildIngredientSection(
+                        title: '보유 재료',
+                        ingredients: categorized['owned']!,
+                        icon: Icons.check_circle,
+                        color: Colors.green,
+                      ),
+                      _buildIngredientSection(
+                        title: '필요 재료',
+                        ingredients: categorized['needed']!,
+                        icon: Icons.cancel,
+                        color: Colors.red,
+                      ),
+                    ],
+                  ),
                 ),
-                _buildIngredientSection(
-                  title: '필요 재료',
-                  ingredients: categorized['needed']!,
-                  icon: Icons.cancel,
-                  color: Colors.red,
-                ),
-                _buildCookButton(context),
-              ],
-            ),
+              ),
+
+              // 하단 "COOK IT !!" 버튼
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildCookButton(context),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  //--------------------------------------------------------------------------
+  // 공유 아이콘 눌렀을 때
+  //--------------------------------------------------------------------------
+  void _handleShare() {
+    // TODO: 실제 공유 로직 (e.g. Share.share("이 레시피를 공유합니다: ..."))
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("공유 기능은 아직 구현되지 않았습니다.")),
+    );
+  }
+
+  Widget _buildMetaSection(String category, String CookingWay) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildMetaChip('음식 종류: $category', Icons.restaurant),
+          _buildMetaChip('조리 방법: $CookingWay', Icons.kitchen),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetaChip(String text, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.black12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String content,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: iconColor),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            content,
+            style:
+                TextStyle(fontSize: 15, height: 1.4, color: Colors.grey[800]),
+          ),
+        ],
       ),
     );
   }
@@ -264,11 +401,11 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       borderRadius: BorderRadius.circular(12),
       child: Image.network(
         imageUrl,
-        height: 200,
+        height: 220,
         width: double.infinity,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
-          height: 200,
+          height: 220,
           color: Colors.grey,
           alignment: Alignment.center,
           child: const Text("No Image", style: TextStyle(color: Colors.white)),
@@ -278,46 +415,51 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   }
 
   //--------------------------------------------------------------------------
-  // 레시피 헤더(제목, 메타정보)
+  // 레시피 제목
   //--------------------------------------------------------------------------
-  Widget _buildRecipeHeader() {
-    final recipeName = widget.recipeData["RCP_NM"] ?? "No Title";
-    return Column(
-      children: [
-        const SizedBox(height: 24),
-        Center(
-          child: Text(
-            recipeName,
-            style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87),
-          ),
+  Widget _buildRecipeTitle(String name) {
+    return Center(
+      child: Text(
+        name,
+        style: const TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
         ),
-        const SizedBox(height: 16),
-        _buildMetaInfoRow(),
-        const Divider(height: 32, thickness: 1, color: Colors.black54),
-      ],
+        textAlign: TextAlign.center,
+      ),
     );
   }
 
-  Widget _buildMetaInfoRow() {
-    // 임의: 1인분, 20분, 공유
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
-        Icon(Icons.people, color: Colors.black87),
-        SizedBox(width: 4),
-        Text('1인분', style: TextStyle(color: Colors.black87)),
-        SizedBox(width: 20),
-        Icon(Icons.timer, color: Colors.black87),
-        SizedBox(width: 4),
-        Text('20분', style: TextStyle(color: Colors.black87)),
-        SizedBox(width: 20),
-        Icon(Icons.share, color: Colors.black87),
-        SizedBox(width: 4),
-        Text('공유', style: TextStyle(color: Colors.black87)),
-      ],
+  //--------------------------------------------------------------------------
+  // 레시피 팁 (RCP_NA_TIP)
+  //--------------------------------------------------------------------------
+  Widget _buildTipCard(String tip) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.yellow[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb, color: Colors.orangeAccent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              "TIP : " + tip,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -335,39 +477,39 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(width: 8),
-              Text(
-                '$title (${ingredients.length}개)',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 8),
+            Text(
+              '$title (${ingredients.length}개)',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+        const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: ingredients.map((ing) {
-            return Chip(
-              backgroundColor: color.withOpacity(0.15),
-              side: BorderSide(color: color.withOpacity(0.3)),
-              label: Text(
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
                 ing,
                 style: TextStyle(color: color, fontWeight: FontWeight.w500),
               ),
-              avatar: Icon(icon, size: 18, color: color),
             );
           }).toList(),
         ),
-        const SizedBox(height: 24),
       ],
     );
   }
@@ -376,27 +518,25 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   // "COOK IT !!" 버튼
   //--------------------------------------------------------------------------
   Widget _buildCookButton(BuildContext context) {
-    return Center(
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          minimumSize: const Size(double.infinity, 50),
-        ),
-        onPressed: () {
-          // BookPage로 이동
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BookPage(recipeData: widget.recipeData),
-            ),
-          );
-        },
-        child: const Text(
-          'COOK IT !!',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.orange,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      onPressed: () {
+        // BookPage로 이동
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BookPage(recipeData: widget.recipeData),
+          ),
+        );
+      },
+      child: Image.asset(
+        'assets/images/CookIT.png',
+        width: 90,
+        height: 50,
       ),
     );
   }

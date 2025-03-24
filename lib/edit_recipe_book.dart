@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:heif_converter/heif_converter.dart';
-import 'package:image/image.dart' as img; // pubspec.yaml에 image ^3.2.3 이상 추가
+import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 
 class EditRecipeBook extends StatefulWidget {

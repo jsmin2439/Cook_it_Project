@@ -39,6 +39,9 @@ class _MainScreenState extends State<MainScreen> {
   // 현재 선택된 하단 탭 인덱스
   int _selectedIndex = 0;
 
+  // HeartScreen의 삭제 모드 on/off를 위해, HeartScreen State를 제어하기 위한 key
+  final GlobalKey<HeartScreenState> _heartScreenKey = GlobalKey();
+
   // 홈 탭(0번)에서 사용될 상태값들
   String? _fmbtResult;
   String? _fmbtSummary;
@@ -48,6 +51,16 @@ class _MainScreenState extends State<MainScreen> {
 
   // PageView 컨트롤러 (AI 레시피 카드 슬라이드용)
   final PageController _pageController = PageController();
+
+  late final _searchScreen = SearchScreen(
+    userId: widget.userId,
+    idToken: widget.idToken,
+  );
+  late final _heartScreen = HeartScreen(
+    key: _heartScreenKey,
+    userId: widget.userId,
+    idToken: widget.idToken,
+  );
 
   @override
   void initState() {
@@ -66,6 +79,11 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  /// HeartScreen에 있는 삭제 모드를 toggle하는 함수
+  void _toggleHeartDeleteMode() {
+    _heartScreenKey.currentState?.toggleDeleteMode();
+  }
+
   // -------------------------
   // (B) 로그아웃 처리
   // -------------------------
@@ -82,24 +100,25 @@ class _MainScreenState extends State<MainScreen> {
   // ==========================================================================
   @override
   Widget build(BuildContext context) {
-    // 탭별로 보여줄 화면을 배열로 준비
-    final List<Widget> screens = [
-      _buildHomeTab(), // 0번 탭: Home
-      _buildCategoryTab(), // 1번 탭: Category (미구현 -> 임시)
-      SearchScreen(), // 2번 탭: Search (이미 구현된 화면)
-      HeartScreen(
-        // 3번 탭: Heart (즐겨찾기)
-        userId: widget.userId,
-        idToken: widget.idToken,
-      ),
-      _buildCommTab(), // 4번 탭: Community (미구현 -> 임시)
+    final screens = [
+      _buildHomeTab(),
+      _buildCategoryTab(),
+      _searchScreen,
+      _heartScreen,
+      _buildCommTab(),
     ];
 
     return Scaffold(
       backgroundColor: kBackgroundColor,
 
+      // 상단바 AppBar를 하나만 고정시키고, 탭마다 액션 아이콘만 달리 보여줌
+      appBar: _buildMainAppBar(),
+
       // body: 현재 선택된 탭의 화면을 보여줌
-      body: screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
 
       // 하단 네비게이션 바
       bottomNavigationBar: BottomNavigationBar(
@@ -113,7 +132,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: '카테고리'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '검색'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border), label: '저장'),
+              icon: Icon(Icons.bookmark_border), label: '저장'),
           BottomNavigationBarItem(
               icon: Icon(Icons.people_alt_outlined), label: '커뮤니티'),
         ],
@@ -129,31 +148,6 @@ class _MainScreenState extends State<MainScreen> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // 상단 앱바 부분
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Row(
-                    children: [
-                      Image.asset('assets/images/CookIT.png',
-                          width: 100, height: 50),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.logout),
-                    color: Colors.redAccent,
-                    onPressed: _handleLogout,
-                  ),
-                ],
-              ),
-            ),
-
             // 사용자 환영 문구
             _buildUserGreeting(),
             const SizedBox(height: 20),
@@ -178,6 +172,49 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildCommTab() {
     return const Center(
       child: Text("Community Screen (아직 구현 전)"),
+    );
+  }
+
+  PreferredSizeWidget _buildMainAppBar() {
+    // _selectedIndex 별로 다른 액션 아이콘을 보여주기 위해 분기
+    List<Widget> actionButtons = [];
+
+    // (1) 3번 탭(HeartScreen)인 경우 → 삭제 아이콘
+    if (_selectedIndex == 3) {
+      _heartScreenKey.currentState?.refreshData();
+      actionButtons.add(
+        IconButton(
+          icon: const Icon(Icons.delete),
+          color: Colors.redAccent,
+          onPressed: _toggleHeartDeleteMode,
+        ),
+      );
+    }
+    // (2) 나머지 탭(예: 홈, 카테고리, 검색, 커뮤니티) → 알림 + 로그아웃 아이콘
+    else {
+      actionButtons.add(
+        IconButton(
+          icon: const Icon(Icons.notifications_none),
+          onPressed: () {
+            // TODO: 알림 페이지로 이동
+          },
+        ),
+      );
+      actionButtons.add(
+        IconButton(
+          icon: const Icon(Icons.logout),
+          color: Colors.redAccent,
+          onPressed: _handleLogout,
+        ),
+      );
+    }
+
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      title: Image.asset('assets/images/CookIT.png', width: 100, height: 50),
+      centerTitle: false, // 원하는대로 조절
+      actions: actionButtons,
     );
   }
 
@@ -207,7 +244,7 @@ class _MainScreenState extends State<MainScreen> {
         const SizedBox(height: 20),
         _buildTasteLabCard(), // FMBT
         const SizedBox(height: 20),
-        _buildIngredientsCard(), // 싫어하는 재료
+        _buildIngredientsCard(), // 싫어하는 재료s
       ],
     );
   }

@@ -75,14 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
                   height: 300,
                 ),
                 const SizedBox(height: 20),
-                // "Cook it!" 텍스트
-                const Text(
-                  "Cook it!",
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Image.asset('assets/images/CookIT.png', width: 180, height: 50),
               ],
             ),
           ),

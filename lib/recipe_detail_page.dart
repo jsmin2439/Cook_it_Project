@@ -155,9 +155,18 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
           originalRecipe: Map<String, dynamic>.from(widget.recipeData),
         ),
       ),
-    ).then((_) {
-      // 편집 후 돌아오면 setState로 재빌드(갱신)
-      setState(() {});
+    ).then((result) {
+      if (result != null) {
+        // result는 수정 후 돌아온 updatedRecipe
+        setState(() {
+          // widget.recipeData를 새로 갱신
+          widget.recipeData.clear();
+          widget.recipeData.addAll(result);
+
+          // 필요하면 _checkIfFavorited() 다시 호출 가능
+          // _checkIfFavorited();
+        });
+      }
     });
   }
 
@@ -309,7 +318,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
 
   Widget _buildMetaSection(String category, String CookingWay) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [

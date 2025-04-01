@@ -11,6 +11,7 @@ import 'survey_screen.dart';
 import 'recipe_detail_page.dart';
 import 'models/fmbt_result.dart';
 import 'result_screen.dart';
+import 'community_screen.dart';
 
 // 테마/컬러 설정
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 전체 배경: 흰색
@@ -62,6 +63,11 @@ class _MainScreenState extends State<MainScreen> {
     idToken: widget.idToken,
   );
 
+  late final _communityScreen = CommunityScreen(
+    userId: widget.userId,
+    idToken: widget.idToken,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -105,7 +111,7 @@ class _MainScreenState extends State<MainScreen> {
       _buildCategoryTab(),
       _searchScreen,
       _heartScreen,
-      _buildCommTab(),
+      _communityScreen,
     ];
 
     return Scaffold(

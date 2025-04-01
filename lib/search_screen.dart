@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
 import 'recipe_detail_page.dart';
 
 // 여기서도 MainScreen과 통일된 색상/스타일을 사용

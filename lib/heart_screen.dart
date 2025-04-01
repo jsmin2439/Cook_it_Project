@@ -66,8 +66,15 @@ class HeartScreenState extends State<HeartScreen> {
   //--------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    // FutureBuilder에 _future 사용
-    return Container(
+    // ▼ (중요) RefreshIndicator로 감싸기 ▼
+    return RefreshIndicator(
+      // 당겨서 새로고침 시 실행될 콜백
+      onRefresh: () async {
+        // FutureBuilder용 Future를 새로고침
+        refreshData();
+        // _future가 완료될 때까지 대기 (선택사항)
+        await _future;
+      },
       child: FutureBuilder<DocumentSnapshot>(
         future: _future,
         builder: (context, snapshot) {
@@ -82,7 +89,7 @@ class HeartScreenState extends State<HeartScreen> {
             );
           }
 
-          // savedRecipes 배열 가져오기
+          // savedRecipes
           final docData = snapshot.data!.data() as Map<String, dynamic>;
           final savedList = docData["savedRecipes"] ?? [];
 
@@ -92,11 +99,12 @@ class HeartScreenState extends State<HeartScreen> {
             );
           }
 
-          // 실제 그리드 표시
           return Padding(
             padding: const EdgeInsets.all(16.0),
+            // GridView는 이미 스크롤 가능하므로, RefreshIndicator가 동작함
             child: GridView.builder(
               itemCount: savedList.length,
+              physics: const AlwaysScrollableScrollPhysics(), // ← 이 줄 추가
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 16,

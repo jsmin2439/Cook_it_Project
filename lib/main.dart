@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'Cook_it_splash.dart'; // SplashScreen import 추가
+import 'Cook_it_splash.dart';
 import 'dart:async';
 import 'login_screen.dart';
 import 'firebase_options.dart';

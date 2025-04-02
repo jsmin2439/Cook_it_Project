@@ -10,7 +10,7 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # 3. CSV 파일 로드
-file_path = "../data/mapped_ingredients_translated2.csv"
+file_path = "../data/mapped_ingredients_translated.csv"
 df = pd.read_csv(file_path)
 
 # 4. Firestore에 데이터 업로드 (문서 ID를 1부터 숫자로 설정)

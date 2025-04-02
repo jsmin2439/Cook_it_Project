@@ -1,8 +1,9 @@
 const express = require("express");
 const { router, initializeRoutes } = require("./routes");
-const { initializeFirebase } = require("./firebase");
+const { initializeFirebase, getDb } = require("./firebase");
 const { initializeOpenAI } = require("./openai");
 const { authMiddleware } = require('./auth');
+const communityRouter = require('./community');
 
 require("dotenv").config();
 
@@ -33,8 +34,14 @@ app.use((req, res, next) => {
 
 // 라우터 설정
 app.use("/verify-login", router);
+app.use("/api", (req, res, next) => {
+    // db 객체를 request에 추가
+    req.db = getDb();
+    next();
+});
 app.use("/api", authMiddleware);
 app.use("/api", router);
+app.use('/api', communityRouter);
 
 // 헬스 체크 라우트
 app.get("/", (req, res) => {

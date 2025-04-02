@@ -35,8 +35,8 @@ def main():
     df['영어재료'] = translated_list
 
     # 결과를 새 CSV 파일로 저장
-    df.to_csv('mapped_ingredients_translated2.csv', index=False, encoding='utf-8')
-    print("번역 완료! 결과가 'mapped_ingredients_translated2.csv'에 저장되었습니다.")
+    df.to_csv('mapped_ingredients_translated.csv', index=False, encoding='utf-8')
+    print("번역 완료! 결과가 'mapped_ingredients_translated.csv'에 저장되었습니다.")
 
 if __name__ == '__main__':
     main()

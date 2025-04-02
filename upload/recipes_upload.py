@@ -3,7 +3,7 @@ from firebase_admin import credentials, firestore
 import json
 
 # Firebase 서비스 계정 키 로드
-cred = credentials.Certificate("../serviceAccountKey.json")
+cred = credentials.Certificate("../cook_it_server/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 
 # Firestore 클라이언트 생성

@@ -211,6 +211,9 @@ router.get('/community/post/:postId', async (req, res) => {
             userRating = postData.ratings ? postData.ratings[req.user.uid] || null : null;
         }
 
+        // 좋아요 카운트 추가
+        const likeCount = postData.likedBy ? postData.likedBy.length : 0;
+
         res.json({
             success: true,
             post: {
@@ -226,6 +229,7 @@ router.get('/community/post/:postId', async (req, res) => {
                 avgRating: postData.avgRating || 0,       // 평균 평점 추가
                 ratingCount: postData.ratingCount || 0,   // 평점 개수 추가
                 userRating: userRating,
+                likeCount: likeCount, // 좋아요 카운트 추가
                 createdAt: postData.createdAt?.toDate() || null
             }
         });
@@ -478,7 +482,6 @@ router.post('/community/post/:postId/rating', authMiddleware, async (req, res) =
 
         const postData = postDoc.data();
         const ratings = postData.ratings || {};
-        const oldRating = ratings[userId] || 0;
 
         // 새 평점 정보 갱신
         ratings[userId] = ratingValue;

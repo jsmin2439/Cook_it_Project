@@ -49,7 +49,7 @@ app.get("/", (req, res) => {
 });
 
 // 에러 처리 미들웨어 (라우터 설정 후에 추가)
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     console.error(err.stack);
     res.status(500).json({
         error: "서버 오류가 발생했습니다.",

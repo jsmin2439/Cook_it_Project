@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:turn_page_transition/turn_page_transition.dart';
-import 'colors.dart';
+import '../color/colors.dart';
 
 const Color kBackgroundColor = Color(0xFFFFF8EC);
 

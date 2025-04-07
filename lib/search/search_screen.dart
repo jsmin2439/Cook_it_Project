@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'recipe_detail_page.dart';
+import '../ai_recipe/recipe_detail_screen.dart';
 
 // 여기서도 MainScreen과 통일된 색상/스타일을 사용
 const Color kBackgroundColor = Color(0xFFFFFFFF);

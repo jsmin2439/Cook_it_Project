@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 // 글 상세 페이지 (예: PostDetailPage)
-import 'community_post_detail_page.dart';
+import 'community_post_detail_screen.dart';
 
 // 글 작성 페이지
 import 'community_post_create_screen.dart';

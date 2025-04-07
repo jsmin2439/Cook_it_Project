@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'models/fmbt_result.dart';
-import 'result_screen.dart';
+import 'model/fmbt_result.dart';
+import 'fmbt_result_screen.dart';
 
 class SurveyScreen extends StatefulWidget {
   final String userId;

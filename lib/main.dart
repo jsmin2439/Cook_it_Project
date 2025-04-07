@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'Cook_it_splash.dart';
+import 'cook_it_splash_screen.dart';
 import 'dart:async';
-import 'login_screen.dart';
+import 'login/login_screen.dart';
 import 'firebase_options.dart';
 import 'package:flutter/services.dart';
 

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
 import 'package:http_parser/http_parser.dart';
-import 'colors.dart';
+import '../color/colors.dart';
 
 class CameraScreen extends StatefulWidget {
   final String userId;

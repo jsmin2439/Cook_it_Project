@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'colors.dart';
+import '../color/colors.dart';
 
 class AddIngredientPage extends StatefulWidget {
   final List<String> currentFridgeIngredients; // 현재 냉장고 재료 목록

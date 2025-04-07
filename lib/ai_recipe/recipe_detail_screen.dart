@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
-import 'book_page.dart';
-import 'edit_recipe_book.dart';
+import 'recipe_book_screen.dart';
+import 'edit_recipe_book_screen.dart';
 
 const Color kBackgroundColor = Color(0xFFFFF8EC);
 

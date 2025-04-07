@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'survey_screen.dart';
-import 'Cook_it_main.dart';
+import 'fmbt_survey_screen.dart';
+import '../home/cook_it_main_screen.dart';
 
 /// 색상/스타일은 기존 상수 재활용 (예: kPinkButtonColor 등)
 const Color kPinkButtonColor = Color(0xFFFFC7B9);

@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'login_screen.dart';
-import 'my_fridge_page.dart';
-import 'search_screen.dart';
-import 'heart_screen.dart';
-import 'survey_screen.dart';
-import 'recipe_detail_page.dart';
-import 'models/fmbt_result.dart';
-import 'result_screen.dart';
-import 'community_screen.dart';
+import '../login/login_screen.dart';
+import '../my_fridge/my_fridge_screen.dart';
+import '../search/search_screen.dart';
+import '../saved/saved_screen.dart';
+import '../fmbt/fmbt_survey_screen.dart';
+import '../ai_recipe/recipe_detail_screen.dart';
+import '../fmbt/model/fmbt_result.dart';
+import '../fmbt/fmbt_result_screen.dart';
+import '../community/community_screen.dart';
 
 // 테마/컬러 설정
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 전체 배경: 흰색

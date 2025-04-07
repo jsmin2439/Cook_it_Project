@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'models/fmbt_result.dart';
+import 'model/fmbt_result.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'Cook_it_main.dart';
+import '../home/cook_it_main_screen.dart';
 
 /// FMBT 결과 화면
 class ResultScreen extends StatelessWidget {

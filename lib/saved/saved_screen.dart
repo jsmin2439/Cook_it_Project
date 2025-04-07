@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
-import 'recipe_detail_page.dart';
+import '../ai_recipe/recipe_detail_screen.dart';
 
 class HeartScreen extends StatefulWidget {
   final String userId;

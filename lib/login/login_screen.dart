@@ -3,9 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'signup_screen.dart';
-import 'Cook_it_main.dart';
-import 'survey_screen.dart'; // 추가
-import 'welcome_fmbt_screen.dart';
+import '../home/cook_it_main_screen.dart';
+import '../fmbt/fmbt_survey_screen.dart'; // 추가
+import '../fmbt/fmbt_welcome_screen.dart';
 
 const Color kButtonColor = Color(0xFFF7C15E);
 const Color kHintBorderColor = Colors.black54;

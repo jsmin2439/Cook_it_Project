@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mediapipe_2/login_screen.dart';
-import 'Cook_it_main.dart';
+import 'package:mediapipe_2/login/login_screen.dart';
+import 'home/cook_it_main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);

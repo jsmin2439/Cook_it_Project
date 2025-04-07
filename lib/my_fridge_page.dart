@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/animation.dart';
 import 'colors.dart';
-import 'camera_screen.dart';
-import 'add_ingredient_page.dart';
+import 'add_ingredient_camera.dart';
+import 'add_ingredient_manual.dart';
 
 class MyFridgePage extends StatefulWidget {
   final String userId;

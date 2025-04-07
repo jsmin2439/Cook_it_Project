@@ -5,19 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a0c7c077-3329-484d-aff3-c82d619655ab" name="변경" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/images/pancake.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/images/pasta.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/images/tteokbokki.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/App" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/App" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/_CodeSignature/CodeResources" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/_CodeSignature/CodeResources" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/AssetManifest.bin" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/AssetManifest.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/AssetManifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/AssetManifest.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/kernel_blob.bin" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/App.framework/flutter_assets/kernel_blob.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/ios/Debug-iphoneos/Runner.app/__preview.dylib" beforeDir="false" afterPath="$PROJECT_DIR$/build/ios/Debug-iphoneos/Runner.app/__preview.dylib" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/Cook_it_login.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/Cook_it_login.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/Cook_it_main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/Cook_it_main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/community_post_create_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/community_post_create_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/community_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/community_screen.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

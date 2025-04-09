@@ -15,7 +15,7 @@ const upload = multer({
 // 커뮤니티 게시물 작성 라우트 (인덱스 기반으로 수정)
 router.post('/community/post', authMiddleware, upload.single('image'), async (req, res) => {
     try {
-        const { recipeIndex, content, title } = req.body;
+        const { recipeIndex, content, title, tags } = req.body;
         const userId = req.user.uid;
         const image = req.file;
 
@@ -26,6 +26,15 @@ router.post('/community/post', authMiddleware, upload.single('image'), async (re
                 error: '레시피 인덱스, 내용, 제목이 모두 필요합니다.'
             });
         }
+
+        // 태그 검증 및 처리 (문자열로 전달된 경우 배열로 변환)
+        let tagArray = tags;
+        if (typeof tags === 'string') {
+            tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        }
+
+        // 태그 최대 5개로 제한
+        tagArray = tagArray.slice(0, 5);
 
         const db = admin.firestore();
 
@@ -84,6 +93,7 @@ router.post('/community/post', authMiddleware, upload.single('image'), async (re
             recipe: recipeToShare,
             likedBy: [],
             comments: [],
+            tags: tagArray,
             ratings: {},      // 평점 정보 초기화
             avgRating: 0,     // 평균 평점 초기화
             ratingCount: 0,   // 평점 개수 초기화
@@ -92,6 +102,26 @@ router.post('/community/post', authMiddleware, upload.single('image'), async (re
 
         // Firestore에 게시물 저장
         const postRef = await db.collection('community').add(postData);
+
+        // 각 태그에 대해 태그 카운트 증가 처리
+        for (const tag of tagArray) {
+            const tagRef = db.collection('tags').doc(tag);
+            const tagDoc = await tagRef.get();
+
+            if (tagDoc.exists) {
+                await tagRef.update({
+                    count: admin.firestore.FieldValue.increment(1),
+                    posts: admin.firestore.FieldValue.arrayUnion(postRef.id)
+                });
+            } else {
+                await tagRef.set({
+                    tag: tag,
+                    count: 1,
+                    posts: [postRef.id],
+                    createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }
 
         // 사용자 문서에 작성한 게시물 ID 추가
         const userPosts = userData.posts || [];
@@ -118,7 +148,7 @@ router.post('/community/post', authMiddleware, upload.single('image'), async (re
 // 커뮤니티 게시물 목록 조회 라우트
 router.get('/community/posts', async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 10, tag } = req.query;
         const pageNumber = parseInt(page);
         const limitNumber = parseInt(limit);
 
@@ -132,16 +162,25 @@ router.get('/community/posts', async (req, res) => {
         const db = admin.firestore();
         const offset = (pageNumber - 1) * limitNumber;
 
+        // 태그 필터링 처리
+        let postsQuery = db.collection('community').orderBy('createdAt', 'desc');
+
+        // 태그가 지정된 경우 필터링
+        if (tag) {
+            postsQuery = postsQuery.where('tags', 'array-contains', tag);
+        }
+
+        // 전체 문서 수 계산 (태그 필터링 포함)
+        const totalCountQuery = tag
+            ? db.collection('community').where('tags', 'array-contains', tag)
+            : db.collection('community');
+
         // 게시물 전체 개수 가져오기
-        const countSnapshot = await db.collection('community').count().get();
+        const countSnapshot = await totalCountQuery.count().get();
         const totalCount = countSnapshot.data().count;
 
-        // 최신 게시물부터 조회
-        const postsSnapshot = await db.collection('community')
-            .orderBy('createdAt', 'desc')
-            .limit(limitNumber)
-            .offset(offset)
-            .get();
+        // 페이지네이션 적용
+        const postsSnapshot = await postsQuery.limit(limitNumber).offset(offset).get();
 
         const posts = [];
         postsSnapshot.forEach(doc => {
@@ -155,6 +194,7 @@ router.get('/community/posts', async (req, res) => {
                 recipeName: postData.recipe?.RCP_NM || '레시피 없음',
                 likeCount: (postData.likedBy || []).length,
                 commentCount: (postData.comments || []).length,
+                tags: postData.tags || [],
                 avgRating: postData.avgRating || 0,       // 평균 평점 추가
                 ratingCount: postData.ratingCount || 0,
                 createdAt: postData.createdAt?.toDate() || null
@@ -164,6 +204,7 @@ router.get('/community/posts', async (req, res) => {
         res.json({
             success: true,
             posts,
+            currentTag: tag || null,
             pagination: {
                 total: totalCount,
                 page: pageNumber,
@@ -226,6 +267,7 @@ router.get('/community/post/:postId', async (req, res) => {
                 recipe: postData.recipe,
                 likedBy: postData.likedBy || [],
                 comments: postData.comments || [],
+                tags: postData.tags || [],
                 avgRating: postData.avgRating || 0,       // 평균 평점 추가
                 ratingCount: postData.ratingCount || 0,   // 평점 개수 추가
                 userRating: userRating,
@@ -239,6 +281,152 @@ router.get('/community/post/:postId', async (req, res) => {
         res.status(500).json({
             success: false,
             error: '게시물 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 인기 태그 목록 조회 API
+router.get('/community/popular-tags', async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        const limitNumber = parseInt(limit);
+
+        if (isNaN(limitNumber) || limitNumber < 1) {
+            return res.status(400).json({
+                success: false,
+                error: '유효한 제한 수가 필요합니다.'
+            });
+        }
+
+        const db = admin.firestore();
+
+        // 태그 컬렉션에서 카운트 기준으로 정렬하여 가져오기
+        const tagsSnapshot = await db.collection('tags')
+            .orderBy('count', 'desc')
+            .limit(limitNumber)
+            .get();
+
+        const tags = [];
+        tagsSnapshot.forEach(doc => {
+            const tagData = doc.data();
+            tags.push({
+                tag: doc.id,
+                count: tagData.count || 0,
+                postCount: tagData.posts?.length || 0
+            });
+        });
+
+        res.json({
+            success: true,
+            tags
+        });
+
+    } catch (error) {
+        console.error('인기 태그 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '인기 태그 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+// 게시물 태그 수정 API 추가
+router.put('/community/post/:postId/tags', authMiddleware, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { tags = [] } = req.body;
+        const userId = req.user.uid;
+
+        // 태그 검증 및 처리
+        let tagArray = tags;
+        if (typeof tags === 'string') {
+            tagArray = tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        }
+
+        // 태그 최대 5개로 제한
+        tagArray = tagArray.slice(0, 5);
+
+        const db = admin.firestore();
+        const postRef = db.collection('community').doc(postId);
+        const postDoc = await postRef.get();
+
+        if (!postDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: '게시물을 찾을 수 없습니다.'
+            });
+        }
+
+        const postData = postDoc.data();
+
+        // 작성자만 수정 가능
+        if (postData.userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                error: '자신이 작성한 게시물만 수정할 수 있습니다.'
+            });
+        }
+
+        // 기존 태그 목록
+        const oldTags = postData.tags || [];
+
+        // 기존 태그 카운트 감소
+        for (const oldTag of oldTags) {
+            const tagRef = db.collection('tags').doc(oldTag);
+            const tagDoc = await tagRef.get();
+
+            if (tagDoc.exists) {
+                const tagData = tagDoc.data();
+                const updatedPosts = tagData.posts.filter(id => id !== postId);
+
+                if (updatedPosts.length === 0) {
+                    // 해당 태그를 사용하는 게시물이 없으면 태그 문서 삭제
+                    await tagRef.delete();
+                } else {
+                    await tagRef.update({
+                        count: admin.firestore.FieldValue.increment(-1),
+                        posts: updatedPosts
+                    });
+                }
+            }
+        }
+
+        // 새 태그 카운트 증가
+        for (const newTag of tagArray) {
+            const tagRef = db.collection('tags').doc(newTag);
+            const tagDoc = await tagRef.get();
+
+            if (tagDoc.exists) {
+                await tagRef.update({
+                    count: admin.firestore.FieldValue.increment(1),
+                    posts: admin.firestore.FieldValue.arrayUnion(postId)
+                });
+            } else {
+                await tagRef.set({
+                    tag: newTag,
+                    count: 1,
+                    posts: [postId],
+                    createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        }
+
+        // 게시물 태그 업데이트
+        await postRef.update({
+            tags: tagArray
+        });
+
+        res.json({
+            success: true,
+            message: '태그가 성공적으로 업데이트되었습니다.',
+            tags: tagArray
+        });
+
+    } catch (error) {
+        console.error('태그 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '태그 수정 중 오류가 발생했습니다.'
         });
     }
 });
@@ -643,6 +831,5 @@ router.delete('/community/post/:postId/comment/:commentId', authMiddleware, asyn
         });
     }
 });
-
 
 module.exports = router;

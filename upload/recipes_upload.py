@@ -35,4 +35,4 @@ def upload_recipes(json_file_path, collection_name):
         print("JSON 데이터를 Firestore에 업로드하는 중 오류 발생:", e)
 
 # 실행 예제
-upload_recipes("../data/recipes.json", "recipes")  # "recipes.json" 파일을 "recipes" 컬렉션에 업로드
+upload_recipes("../data/recipes_edit.json", "recipes")  # "recipes.json" 파일을 "recipes" 컬렉션에 업로드

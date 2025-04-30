@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'model/fmbt_result.dart';
+import '../model/fmbt_result.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../home/cook_it_main_screen.dart';
 

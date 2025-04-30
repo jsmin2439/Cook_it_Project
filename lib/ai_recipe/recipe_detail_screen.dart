@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'recipe_book_screen.dart';
 import 'edit_recipe_book_screen.dart';
+import '../community/community_post_create_screen.dart';
 
 const Color kBackgroundColor = Color(0xFFFFF8EC);
 
@@ -255,7 +256,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                       // 레시피명
                       _buildRecipeTitle(recipe["RCP_NM"] ?? "No Title"),
 
-                      // 세련된 정보 카드: category, cookingWay, recommendReason
+                      // 레시피 정보 카드: category, cookingWay, recommendReason
                       _buildMetaSection(category, cookingWay),
                       const SizedBox(height: 24),
 
@@ -309,11 +310,42 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   //--------------------------------------------------------------------------
   // 공유 아이콘 눌렀을 때
   //--------------------------------------------------------------------------
-  void _handleShare() {
-    // TODO: 실제 공유 로직 (e.g. Share.share("이 레시피를 공유합니다: ..."))
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("공유 기능은 아직 구현되지 않았습니다.")),
+
+  void _handleShare() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("레시피 공유"),
+        content: const Text("이 레시피를 커뮤니티에 공유하시겠습니까?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("취소"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("공유하기"),
+          ),
+        ],
+      ),
     );
+
+    // 사용자가 "공유하기"를 눌렀을 때만 화면 전환
+    if (confirmed == true) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CommunityPostCreateScreen(
+            userId: widget.userId,
+            idToken: widget.idToken,
+            preSelectedRecipe: widget.recipeData,
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildMetaSection(String category, String CookingWay) {

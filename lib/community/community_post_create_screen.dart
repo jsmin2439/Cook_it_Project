@@ -10,11 +10,13 @@ import 'package:path_provider/path_provider.dart';
 class CommunityPostCreateScreen extends StatefulWidget {
   final String userId;
   final String idToken;
+  final Map<String, dynamic>? preSelectedRecipe;
 
   const CommunityPostCreateScreen({
     Key? key,
     required this.userId,
     required this.idToken,
+    this.preSelectedRecipe,
   }) : super(key: key);
 
   @override
@@ -97,6 +99,81 @@ class _CommunityPostCreateScreenState extends State<CommunityPostCreateScreen> {
               ),
             ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 기존에 있던 코드가 있다면 유지
+
+    // 레시피가 미리 선택되었다면 초기화
+    if (widget.preSelectedRecipe != null) {
+      _setupPreSelectedRecipe();
+    }
+  }
+
+  void _setupPreSelectedRecipe() async {
+    try {
+      setState(() => _isLoading = true);
+
+      final userSnap = await FirebaseFirestore.instance
+          .collection('user')
+          .doc(widget.userId)
+          .get();
+
+      final data = userSnap.data() as Map<String, dynamic>?;
+      if (data == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final savedRecipes = data["savedRecipes"] as List<dynamic>? ?? [];
+      if (savedRecipes.isEmpty) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final preSeq = widget.preSelectedRecipe?["RCP_SEQ"]?.toString() ?? "";
+
+      int? foundIndex;
+      for (int i = 0; i < savedRecipes.length; i++) {
+        final recipe = savedRecipes[i] as Map<String, dynamic>;
+        if (recipe["RCP_SEQ"]?.toString() == preSeq) {
+          foundIndex = i;
+          break;
+        }
+      }
+
+      setState(() {
+        _isLoading = false;
+
+        if (foundIndex != null) {
+          _selectedRecipeIndex = foundIndex;
+          final recipe = savedRecipes[foundIndex] as Map<String, dynamic>;
+          _selectedRecipeName = recipe["RCP_NM"] ?? "No Name";
+          _selectedRecipeImageUrl = recipe["ATT_FILE_NO_MAIN"] ?? "";
+
+          // 제목과 내용 자동 채우기
+          _titleController.text = "레시피 공유: $_selectedRecipeName";
+          _contentController.text = "이 레시피를 공유합니다: $_selectedRecipeName";
+
+          // 태그 자동 추가
+          final category = recipe["RCP_PAT2"] ?? "";
+          final way = recipe["RCP_WAY2"] ?? "";
+          if (category.isNotEmpty || way.isNotEmpty) {
+            final tags = <String>[];
+            if (category.isNotEmpty) tags.add("#$category");
+            if (way.isNotEmpty) tags.add("#$way");
+            tags.add("#요리공유");
+            _tagsController.text = tags.join(", ");
+          }
+        }
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      debugPrint("사전 선택 레시피 설정 오류: $e");
+    }
   }
 
   Widget _buildImagePicker() {

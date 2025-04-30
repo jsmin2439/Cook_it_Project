@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../IngredientCategorySelectScreen.dart';
 import '../login/login_screen.dart';
 import '../my_fridge/my_fridge_screen.dart';
 import '../search/search_screen.dart';
 import '../saved/saved_screen.dart';
 import '../fmbt/fmbt_survey_screen.dart';
 import '../ai_recipe/recipe_detail_screen.dart';
-import '../fmbt/model/fmbt_result.dart';
+import '../model/fmbt_result.dart';
 import '../fmbt/fmbt_result_screen.dart';
 import '../community/community_screen.dart';
 
@@ -74,6 +75,33 @@ class _MainScreenState extends State<MainScreen> {
     // 홈 탭에서 필요한 것들 불러오기
     _fetchRecommendedRecipes();
     _fetchFMBTResult().then((_) => _fetchFMBTSummary());
+  }
+
+  /// 선택된 카테고리명 배열을 받아 Firestore `ingredients` 컬렉션을 조회,
+  /// 중복 없이 식재료 이름만 모아서 돌려준다.
+  Future<List<String>> _expandCategoriesToIngredients(
+      List<String> categories) async {
+    if (categories.isEmpty) return [];
+
+    // ⚠️ `whereIn` 은 최대 10개까지만 허용 → 10개씩 나눠서 질의
+    final chunks = <List<String>>[];
+    for (var i = 0; i < categories.length; i += 10) {
+      chunks.add(categories.sublist(i, (i + 10).clamp(0, categories.length)));
+    }
+
+    final set = <String>{};
+    for (final part in chunks) {
+      final snap = await FirebaseFirestore.instance
+          .collection('ingredients')
+          .where('카테고리', whereIn: part)
+          .get();
+
+      for (final doc in snap.docs) {
+        final name = doc.data()['식재료']?.toString().trim();
+        if (name != null && name.isNotEmpty) set.add(name);
+      }
+    }
+    return set.toList()..sort();
   }
 
   // -------------------------
@@ -626,121 +654,161 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // ────────────────────────────────────────────────────────────────
+  ///  (3) 나의 식습관 좌표 FMBT 카드
+// ────────────────────────────────────────────────────────────────
   Widget _buildTasteLabCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: kCardColor,
-              borderRadius: BorderRadius.circular(kBorderRadius),
-              border: Border.all(color: Colors.black26),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  "🍽️ 나의 식습관 좌표 FMBT",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-
-                // 아직 검사 안 했을 때
-                if (_fmbtResult == null)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPinkButtonColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kCardColor.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(kBorderRadius),
+          border: Border.all(color: Colors.black26),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ───── 제목 + 아이콘 ─────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Row(
+                children: const [
+                  Icon(Icons.person_pin_circle, color: Colors.brown, size: 26),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '나의 식습관 좌표 FMBT',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kTextColor,
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
                     ),
-                    onPressed: _goToSurvey,
-                    child:
-                        const Text("FMBT 검사하기", style: TextStyle(fontSize: 16)),
-                  )
-                else
-                  // 이미 검사한 경우
-                  Column(
-                    children: [
-                      const Text(
-                        "이미 검사하셨습니다!",
-                        style: TextStyle(color: Colors.brown),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "FMBT 유형: $_fmbtResult",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      if (_fmbtSummary != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            _fmbtSummary!,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[800],
-                              fontStyle: FontStyle.italic,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      const SizedBox(height: 10),
-
-                      // 다시 검사하기 / 결과 보기
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orangeAccent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
-                            onPressed: _resetSurveyAndRetest,
-                            child: const Text(
-                              "다시 검사하기",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                            ),
-                            onPressed: _viewSurveyResults,
-                            child: const Text(
-                              "검사 결과 보기",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            const Divider(height: 1),
+
+            // ───── 내용 영역 ────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: _fmbtResult == null
+                  // 1) 아직 검사 안 함 ───────────────────────
+                  ? Column(
+                      children: [
+                        const Text(
+                          '한 번의 간단한 문답으로\n나의 식습관 유형을 알아보세요!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 15, color: kTextColor),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kPinkButtonColor,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: _goToSurvey,
+                          icon: const Icon(Icons.quiz),
+                          label: const Text('FMBT 검사하기',
+                              style: TextStyle(fontSize: 16)),
+                        ),
+                      ],
+                    )
+                  // 2) 이미 검사함 ───────────────────────────
+                  : Column(
+                      children: [
+                        // 유형 Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.orangeAccent.shade100,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: Text(
+                            _fmbtResult!,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // 한줄 요약
+                        if (_fmbtSummary != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orangeAccent.shade100
+                                  .withOpacity(0.35),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _fmbtSummary!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+
+                        const SizedBox(height: 18),
+
+                        // 버튼 2 개
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orangeAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed: _resetSurveyAndRetest,
+                              child: const Text('다시 검사하기',
+                                  style: TextStyle(fontSize: 14)),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blueAccent,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 12),
+                              ),
+                              onPressed: _viewSurveyResults,
+                              child: const Text('결과 자세히 보기',
+                                  style: TextStyle(fontSize: 14)),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -852,46 +920,119 @@ class _MainScreenState extends State<MainScreen> {
   //--------------------------------------------------------------------------
   // (4) 싫어하거나 피하고 싶은 재료
   //--------------------------------------------------------------------------
+  // ────────────────────────────────────────────────────────────────
+  ///  (4) 싫어하거나 피하고 싶은 재료  카드
+// ────────────────────────────────────────────────────────────────
   Widget _buildIngredientsCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: kCardColor.withOpacity(0.8),
           borderRadius: BorderRadius.circular(kBorderRadius),
           border: Border.all(color: Colors.black26),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+          ],
         ),
-        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              "싫어하거나 피하고 싶은 재료가 있나요?",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildIngredientChip("알코올"),
-                _buildIngredientChip("달걀"),
-                _buildIngredientChip("우유"),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kPinkButtonColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+            // ───── 제목 영역 ────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: const [
+                  Icon(Icons.no_food, size: 26, color: Colors.brown),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '피하고 싶은 재료 목록',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kTextColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              onPressed: () {
-                // TODO: 수정하기 기능
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("수정하기 기능은 준비 중입니다.")),
+            ),
+
+            const Divider(height: 1),
+
+            // ───── 현재 선택된 재료 / 미설정 안내 ──────────────────
+            FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('user')
+                  .doc(widget.userId)
+                  .get(),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                final List<String> ingreds =
+                    List<String>.from(data['allergic_ingredients'] ?? []);
+
+                if (ingreds.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      '아직 설정하지 않으셨네요!\n'
+                      '“수정하기” 버튼을 눌러 제외할 재료를 선택해 주세요.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children:
+                        ingreds.take(12).map(_buildIngredientChip).toList()
+                          ..addAll(
+                            ingreds.length > 12
+                                ? [
+                                    Text('+ ${ingreds.length - 12} 더보기',
+                                        style: const TextStyle(
+                                            fontSize: 13, color: Colors.grey))
+                                  ]
+                                : [],
+                          ),
+                  ),
                 );
               },
-              child: const Text("수정하기"),
+            ),
+
+            const SizedBox(height: 4),
+
+            // ───── 수정하기 버튼 ───────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kPinkButtonColor,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                icon: const Icon(Icons.edit, size: 20),
+                label: const Text('수정하기', style: TextStyle(fontSize: 15)),
+                onPressed: _openIngredientSelector,
+              ),
             ),
           ],
         ),
@@ -899,15 +1040,53 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildIngredientChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black45),
+  /// 수정하기 버튼이 눌렸을 때 로직 (기존 코드에서 분리해서 재사용)
+  Future<void> _openIngredientSelector() async {
+    // 1) 현재 값 로드
+    final doc = await FirebaseFirestore.instance
+        .collection('user')
+        .doc(widget.userId)
+        .get();
+    final List<String> alreadyCats =
+        List<String>.from(doc.data()?['excludedCategories'] ?? []);
+    final List<String> alreadyIngs =
+        List<String>.from(doc.data()?['allergic_ingredients'] ?? []);
+
+    // 2) 선택 화면 이동
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => IngredientCategorySelectScreen(
+          initialSelectedCategories: alreadyCats,
+          initialCheckedIngredients: alreadyIngs,
+        ),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 14)),
+    );
+
+    if (result == null) return;
+
+    // 3) 저장
+    await FirebaseFirestore.instance
+        .collection('user')
+        .doc(widget.userId)
+        .update({
+      'excludedCategories': result['categories'],
+      'allergic_ingredients': result['ingredients'],
+    });
+
+    setState(() {}); // 카드 즉시 갱신
+  }
+
+  /// 베이지 칩 스타일
+  Widget _buildIngredientChip(String label) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 13)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: Colors.black26),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

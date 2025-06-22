@@ -851,7 +851,7 @@ router.get('/community/user-posts', authMiddleware, async (req, res) => {
                 id: doc.id,
                 title: postData.title,
                 content: postData.content,
-                imageUrl: postData.imageUrl,
+                imageUrl: postData.recipe?.ATT_FILE_NO_MAIN || postData.imageUrl,
                 createdAt: postData.createdAt,
                 likeCount: (postData.likedBy || []).length,
                 commentCount: (postData.comments || []).length,

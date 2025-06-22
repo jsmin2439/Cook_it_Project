@@ -7,28 +7,26 @@ const Color kCardColor = Color(0xFFFFECD0);
 const Color kPinkButtonColor = Color(0xFFFFC7B9);
 const Color kTextColor = Colors.black87;
 const double kBorderRadius = 16.0;
-
-// 이번 화면에서 포인트 컬러로 쓸 살짝 진한 올리브
 const Color kAccentColor = Color(0xFF6B8E23);
 
 // ───────────────────────────────────────── 위젯
-class IngredientCategorySelectScreen extends StatefulWidget {
+class AllergyHateCategoryScreen extends StatefulWidget {
   final List<String> initialSelectedCategories; // 이미 선택된 카테고리
   final List<String> initialCheckedIngredients; // 이미 체크된 개별 재료
 
-  const IngredientCategorySelectScreen({
+  const AllergyHateCategoryScreen({
     Key? key,
     required this.initialSelectedCategories,
     required this.initialCheckedIngredients,
   }) : super(key: key);
 
   @override
-  State<IngredientCategorySelectScreen> createState() =>
+  State<AllergyHateCategoryScreen> createState() =>
       _IngredientCategorySelectScreenState();
 }
 
 class _IngredientCategorySelectScreenState
-    extends State<IngredientCategorySelectScreen> {
+    extends State<AllergyHateCategoryScreen> {
   // ───────── state
   late Future<Map<String, List<String>>> _dataFuture;
   Map<String, List<String>>? _categoryData;

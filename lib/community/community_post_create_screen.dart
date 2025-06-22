@@ -770,7 +770,7 @@ class _CommunityPostCreateScreenState extends State<CommunityPostCreateScreen> {
 
     try {
       final url =
-          Uri.parse("http://jsmin2439.iptime.org:3000/api/community/post");
+          Uri.parse("http://gamproject.iptime.org:3000/api/community/post");
       final request = http.MultipartRequest("POST", url)
         ..headers["Authorization"] = "Bearer ${widget.idToken}"
         ..fields["title"] = title

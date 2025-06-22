@@ -57,6 +57,7 @@ class _WelcomeFmbtScreenState extends State<WelcomeFmbtScreen> {
         builder: (_) => SurveyScreen(
           userId: widget.userId,
           idToken: widget.idToken,
+          isFirstLogin: true,
         ),
       ),
     );

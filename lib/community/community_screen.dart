@@ -52,7 +52,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     });
 
     final url = Uri.parse(
-      "http://jsmin2439.iptime.org:3000/api/community/posts"
+      "http://gamproject.iptime.org:3000/api/community/posts"
       "?page=$_currentPage&limit=$_limit",
     );
 

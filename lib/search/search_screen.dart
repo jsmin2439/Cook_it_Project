@@ -55,7 +55,7 @@ class _SearchScreenState extends State<SearchScreen>
       _recipes = [];
     });
 
-    final url = Uri.parse("http://jsmin2439.iptime.org:3000/api/smart-search");
+    final url = Uri.parse("http://gamproject.iptime.org:3000/api/smart-search");
     try {
       final response = await http.post(
         url,

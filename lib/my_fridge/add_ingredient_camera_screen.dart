@@ -115,7 +115,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<List<String>?> _uploadToServer(String filePath) async {
     try {
       final uri =
-          Uri.parse("http://jsmin2439.iptime.org:3000/api/upload-ingredient");
+          Uri.parse("http://gamproject.iptime.org:3000/api/upload-ingredient");
       final imageFile = File(filePath);
       final imageBytes = await imageFile.readAsBytes();
 

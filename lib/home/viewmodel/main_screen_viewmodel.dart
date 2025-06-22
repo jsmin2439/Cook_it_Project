@@ -76,7 +76,7 @@ class MainScreenViewModel extends ChangeNotifier {
 
     try {
       final uri =
-          Uri.parse("http://jsmin2439.iptime.org:3000/api/recommend-recipes");
+          Uri.parse("http://gamproject.iptime.org:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
         headers: {
@@ -190,7 +190,7 @@ class MainScreenViewModel extends ChangeNotifier {
   Future<void> viewSurveyResults(BuildContext context) async {
     try {
       final uri = Uri.parse(
-        'http://jsmin2439.iptime.org:3000/api/calculate-fmbt?userId=$userId',
+        'http://gamproject.iptime.org:3000/api/calculate-fmbt?userId=$userId',
       );
 
       final response = await http.get(

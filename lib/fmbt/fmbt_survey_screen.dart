@@ -128,7 +128,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
   Future<void> _requestFmbtResult() async {
     try {
       final uri = Uri.parse(
-          'http://jsmin2439.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}');
+          'http://gamproject.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}');
       final response = await http.get(uri, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.idToken}',
@@ -149,6 +149,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
                 resultData: resultData,
                 userId: widget.userId,
                 idToken: widget.idToken,
+                isFirstUser: widget.isFirstLogin,
               ),
             ),
           );

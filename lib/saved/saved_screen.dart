@@ -313,7 +313,7 @@ class HeartScreenState extends State<HeartScreen> {
   //--------------------------------------------------------------------------
   Future<void> _deleteRecipeFromServer(int index) async {
     final url =
-        Uri.parse('http://jsmin2439.iptime.org:3000/api/saved-recipe/$index');
+        Uri.parse('http://gamproject.iptime.org:3000/api/saved-recipe/$index');
     try {
       final response = await http.delete(
         url,

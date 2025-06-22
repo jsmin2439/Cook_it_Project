@@ -45,7 +45,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (recipeId.isEmpty) return; // ID가 없으면 중단
 
     final url = Uri.parse(
-        'http://jsmin2439.iptime.org:3000/api/saved-recipes/$recipeId');
+        'http://gamproject.iptime.org:3000/api/saved-recipes/$recipeId');
     try {
       final response = await http.get(
         url,
@@ -73,7 +73,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final recipeId = widget.recipeData["id"]?.toString() ?? "";
     if (recipeId.isEmpty) return;
 
-    final url = Uri.parse('http://jsmin2439.iptime.org:3000/api/save-recipe');
+    final url = Uri.parse('http://gamproject.iptime.org:3000/api/save-recipe');
     try {
       final response = await http.post(
         url,
@@ -107,7 +107,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (recipeId.isEmpty) return;
 
     final url = Uri.parse(
-        'http://jsmin2439.iptime.org:3000/api/saved-recipes/$recipeId');
+        'http://gamproject.iptime.org:3000/api/saved-recipes/$recipeId');
     try {
       final response = await http.delete(
         url,
@@ -152,7 +152,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
       MaterialPageRoute(
         builder: (_) => EditRecipeBook(
           userId: widget.userId,
-          idToken: widget.idToken,
           originalRecipe: Map<String, dynamic>.from(widget.recipeData),
         ),
       ),

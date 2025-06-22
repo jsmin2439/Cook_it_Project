@@ -70,7 +70,7 @@ class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
     });
 
     final url = Uri.parse(
-        "http://jsmin2439.iptime.org:3000/api/community/post/${widget.postId}");
+        "http://gamproject.iptime.org:3000/api/community/post/${widget.postId}");
     try {
       final response = await http.get(
         url,
@@ -110,7 +110,7 @@ class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
 
     try {
       final url = Uri.parse(
-          "http://jsmin2439.iptime.org:3000/api/community/post/$postId/like");
+          "http://gamproject.iptime.org:3000/api/community/post/$postId/like");
       final response = await http.post(
         url,
         headers: {
@@ -144,7 +144,7 @@ class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
   Future<void> _deleteComment(String commentId) async {
     final postId = widget.postId;
     final url = Uri.parse(
-        "http://jsmin2439.iptime.org:3000/api/community/post/$postId/comment/$commentId");
+        "http://gamproject.iptime.org:3000/api/community/post/$postId/comment/$commentId");
 
     try {
       final response = await http.delete(
@@ -213,7 +213,7 @@ class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
 
     final postId = widget.postId;
     final url = Uri.parse(
-        "http://jsmin2439.iptime.org:3000/api/community/post/$postId/comment/$commentId");
+        "http://gamproject.iptime.org:3000/api/community/post/$postId/comment/$commentId");
 
     try {
       final response = await http.put(
@@ -563,7 +563,7 @@ class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
     try {
       final response = await http.post(
         Uri.parse(
-            "http://jsmin2439.iptime.org:3000/api/community/post/${widget.postId}/comment"),
+            "http://gamproject.iptime.org:3000/api/community/post/${widget.postId}/comment"),
         headers: {
           "Authorization": "Bearer ${widget.idToken}",
           "Content-Type": "application/json",

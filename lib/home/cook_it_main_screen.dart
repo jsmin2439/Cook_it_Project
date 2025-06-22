@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../IngredientCategorySelectScreen.dart';
+import '../allergy_hate_category_screen.dart';
 import '../login/login_screen.dart';
 import '../my_fridge/my_fridge_screen.dart';
 import '../search/search_screen.dart';
@@ -427,7 +427,7 @@ class _MainScreenState extends State<MainScreen> {
 
     try {
       final uri =
-          Uri.parse("http://jsmin2439.iptime.org:3000/api/recommend-recipes");
+          Uri.parse("http://gamproject.iptime.org:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
         headers: {
@@ -453,80 +453,135 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _isLoading = false);
   }
 
+  // ──────────────────────────────────────────────
+  /// (2)  AI 맞춤 레시피
+// ──────────────────────────────────────────────
   Widget _buildAiRecipeCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        height: 240,
         decoration: BoxDecoration(
-          color: kCardColor,
+          color: kCardColor.withOpacity(0.9),
           borderRadius: BorderRadius.circular(kBorderRadius),
           border: Border.all(color: Colors.black26),
+          boxShadow: const [
+            BoxShadow(
+                color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // 제목 + 새로고침
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── 헤더 ───────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Row(
                 children: [
                   Image.asset('assets/images/cookbook.png',
-                      width: 30, height: 30),
+                      width: 26, height: 26),
                   const SizedBox(width: 8),
-                  Text(
-                    "AI 맞춤 레시피",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.brown[700],
+                  const Expanded(
+                    child: Text(
+                      'AI 맞춤 레시피',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: kTextColor),
                     ),
                   ),
-                  const Spacer(),
                   IconButton(
-                    icon: Icon(Icons.refresh, color: Colors.brown[600]),
+                    icon: const Icon(Icons.refresh),
+                    color: Colors.brown[600],
+                    tooltip: '다시 추천',
                     onPressed: _fetchRecommendedRecipes,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+            ),
+            const Divider(height: 1),
 
-              // 레시피 내용 or 로딩
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _recommendedRecipes.isEmpty
-                        ? Center(
-                            child: Text(
-                              "추천 레시피를 가져오는 중...",
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                          )
-                        : PageView.builder(
-                            controller: _pageController,
-                            itemCount: _recommendedRecipes.length,
-                            onPageChanged: (index) {
-                              setState(() => _currentPage = index);
-                            },
-                            itemBuilder: (context, index) {
-                              final recipe = _recommendedRecipes[index];
-                              return _buildRecipeItem(recipe);
-                            },
+            // ── 레시피 뷰어 ──────────────────────────
+            SizedBox(
+              height: 180,
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _recommendedRecipes.isEmpty
+                      ? const Center(
+                          child: Text(
+                            '추천 레시피가 없습니다.\n재료를 추가해보세요!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey),
                           ),
-              ),
-              const SizedBox(height: 10),
+                        )
+                      : PageView.builder(
+                          controller: _pageController,
+                          itemCount: _recommendedRecipes.length,
+                          onPageChanged: (i) =>
+                              setState(() => _currentPage = i),
+                          itemBuilder: (context, idx) {
+                            final r = _recommendedRecipes[idx];
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RecipeDetailPage(
+                                    recipeData: r,
+                                    userId: widget.userId,
+                                    idToken: widget.idToken,
+                                  ),
+                                ),
+                              ),
+                              child: Card(
+                                clipBehavior: Clip.antiAlias,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                child: Column(
+                                  children: [
+                                    Expanded(
+                                      child: r['ATT_FILE_NO_MAIN'] == null
+                                          ? Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(Icons.fastfood,
+                                                  size: 40, color: Colors.grey),
+                                            )
+                                          : Image.network(
+                                              r['ATT_FILE_NO_MAIN'],
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                            ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Text(
+                                        r['RCP_NM'] ?? '',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+            ),
 
-              // 페이지 인디케이터
-              if (!_isLoading && _recommendedRecipes.isNotEmpty)
-                Row(
+            // ── 페이지 인디케이터 ─────────────────────
+            if (!_isLoading && _recommendedRecipes.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     _recommendedRecipes.length,
-                    (index) => Container(
-                      width: _currentPage == index ? 12 : 8,
+                    (i) => Container(
+                      width: _currentPage == i ? 12 : 8,
                       height: 8,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
-                        color: _currentPage == index
+                        color: _currentPage == i
                             ? Colors.brown[700]
                             : Colors.grey[400],
                         borderRadius: BorderRadius.circular(4),
@@ -534,8 +589,8 @@ class _MainScreenState extends State<MainScreen> {
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -1056,7 +1111,7 @@ class _MainScreenState extends State<MainScreen> {
     final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(
-        builder: (_) => IngredientCategorySelectScreen(
+        builder: (_) => AllergyHateCategoryScreen(
           initialSelectedCategories: alreadyCats,
           initialCheckedIngredients: alreadyIngs,
         ),

@@ -832,4 +832,96 @@ router.delete('/community/post/:postId/comment/:commentId', authMiddleware, asyn
     }
 });
 
+// community.js 파일에 사용자별 게시물 조회 라우트 추가
+router.get('/community/user-posts', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const db = admin.firestore();
+
+        const postsQuery = db.collection('community')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc');
+
+        const postsSnapshot = await postsQuery.get();
+
+        const posts = [];
+        postsSnapshot.forEach(doc => {
+            const postData = doc.data();
+            posts.push({
+                id: doc.id,
+                title: postData.title,
+                content: postData.content,
+                imageUrl: postData.imageUrl,
+                createdAt: postData.createdAt,
+                likeCount: (postData.likedBy || []).length,
+                commentCount: (postData.comments || []).length,
+                tags: postData.tags || [],
+                avgRating: postData.avgRating || 0,
+                ratingCount: postData.ratingCount || 0
+            });
+        });
+
+        res.json({
+            success: true,
+            posts
+        });
+
+    } catch (error) {
+        console.error('사용자 게시물 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '게시물 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
+
+// 게시물 수정 라우트 추가
+router.put('/community/post/:postId', authMiddleware, async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user.uid;
+        const { title, content, tags } = req.body;
+
+        const db = admin.firestore();
+        const postRef = db.collection('community').doc(postId);
+        const postDoc = await postRef.get();
+
+        if (!postDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: '게시물을 찾을 수 없습니다.'
+            });
+        }
+
+        // 본인 게시물인지 확인
+        if (postDoc.data().userId !== userId) {
+            return res.status(403).json({
+                success: false,
+                error: '본인의 게시물만 수정할 수 있습니다.'
+            });
+        }
+
+        // 업데이트할 필드
+        const updateData = {};
+        if (title) updateData.title = title;
+        if (content) updateData.content = content;
+        if (tags) updateData.tags = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+
+        await postRef.update(updateData);
+
+        res.json({
+            success: true,
+            message: '게시물이 성공적으로 수정되었습니다.'
+        });
+
+    } catch (error) {
+        console.error('게시물 수정 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '게시물 수정 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 module.exports = router;

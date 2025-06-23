@@ -148,21 +148,17 @@ router.post('/community/post', authMiddleware, upload.single('image'), async (re
 // 커뮤니티 게시물 목록 조회 라우트
 router.get('/community/posts', async (req, res) => {
     try {
-        const { page = 1, limit = 10, tag } = req.query;
+        const { page = 1, limit = 10, tag, search, sort = 'recent' } = req.query;
         const pageNumber = parseInt(page);
         const limitNumber = parseInt(limit);
 
         if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber < 1 || limitNumber < 1) {
-            return res.status(400).json({
-                success: false,
-                error: '유효한 페이지 및 제한 수가 필요합니다.'
-            });
+            return res.status(400).json({ error: '유효하지 않은 페이지 파라미터입니다.' });
         }
 
         const db = admin.firestore();
-        const offset = (pageNumber - 1) * limitNumber;
 
-        // 태그 필터링 처리
+        // 기본 쿼리 설정 - 최신순으로 정렬
         let postsQuery = db.collection('community').orderBy('createdAt', 'desc');
 
         // 태그가 지정된 경우 필터링
@@ -170,45 +166,78 @@ router.get('/community/posts', async (req, res) => {
             postsQuery = postsQuery.where('tags', 'array-contains', tag);
         }
 
-        // 전체 문서 수 계산 (태그 필터링 포함)
-        const totalCountQuery = tag
-            ? db.collection('community').where('tags', 'array-contains', tag)
-            : db.collection('community');
+        // 모든 게시물 가져오기 (검색어가 있는 경우 서버에서 필터링)
+        const postsSnapshot = await postsQuery.get();
 
-        // 게시물 전체 개수 가져오기
-        const countSnapshot = await totalCountQuery.count().get();
-        const totalCount = countSnapshot.data().count;
-
-        // 페이지네이션 적용
-        const postsSnapshot = await postsQuery.limit(limitNumber).offset(offset).get();
-
-        const posts = [];
+        // 검색 필터링 및 관련도 점수 계산
+        let filteredPosts = [];
         postsSnapshot.forEach(doc => {
             const postData = doc.data();
-            posts.push({
+            const postItem = {
                 id: doc.id,
                 title: postData.title,
                 content: postData.content,
                 imageUrl: postData.recipe?.ATT_FILE_NO_MAIN || postData.imageUrl,
-                userName: postData.userName,
-                recipeName: postData.recipe?.RCP_NM || '레시피 없음',
+                createdAt: postData.createdAt,
                 likeCount: (postData.likedBy || []).length,
                 commentCount: (postData.comments || []).length,
                 tags: postData.tags || [],
-                avgRating: postData.avgRating || 0,       // 평균 평점 추가
+                avgRating: postData.avgRating || 0,
                 ratingCount: postData.ratingCount || 0,
-                createdAt: postData.createdAt?.toDate() || null
-            });
+                userName: postData.userName || '익명'
+            };
+
+            // 검색어가 있는 경우 필터링 적용
+            if (search) {
+                const searchLower = search.toLowerCase();
+                const titleMatch = postData.title?.toLowerCase().includes(searchLower);
+                const contentMatch = postData.content?.toLowerCase().includes(searchLower);
+                const tagsMatch = (postData.tags || []).some(tag =>
+                    tag.toLowerCase().includes(searchLower));
+
+                // 관련도 점수 계산
+                let relevanceScore = 0;
+                if (titleMatch) relevanceScore += 3;  // 제목 일치: 3점
+                if (tagsMatch) relevanceScore += 2;   // 태그 일치: 2점
+                if (contentMatch) relevanceScore += 1; // 내용 일치: 1점
+
+                if (titleMatch || contentMatch || tagsMatch) {
+                    filteredPosts.push({
+                        ...postItem,
+                        relevanceScore
+                    });
+                }
+            } else {
+                // 검색어가 없으면 모든 게시물 포함
+                filteredPosts.push({
+                    ...postItem,
+                    relevanceScore: 0
+                });
+            }
         });
+
+        // 정렬 적용
+        if (search && sort === 'relevance') {
+            // 관련도순 정렬 (검색어가 있을 때만)
+            filteredPosts.sort((a, b) => b.relevanceScore - a.relevanceScore);
+        }
+        // 최신순은 이미 Firestore 쿼리에서 정렬된 상태
+
+        // 전체 게시물 수
+        const totalCount = filteredPosts.length;
+
+        // 페이지네이션 적용
+        const start = (pageNumber - 1) * limitNumber;
+        const end = start + limitNumber;
+        const paginatedPosts = filteredPosts.slice(start, end);
 
         res.json({
             success: true,
-            posts,
-            currentTag: tag || null,
+            posts: paginatedPosts,
             pagination: {
-                total: totalCount,
                 page: pageNumber,
                 limit: limitNumber,
+                total: totalCount,
                 totalPages: Math.ceil(totalCount / limitNumber)
             }
         });
@@ -216,12 +245,10 @@ router.get('/community/posts', async (req, res) => {
     } catch (error) {
         console.error('커뮤니티 게시물 조회 오류:', error);
         res.status(500).json({
-            success: false,
-            error: '게시물 목록 조회 중 오류가 발생했습니다.'
+            error: '게시물 조회 중 오류가 발생했습니다.'
         });
     }
 });
-
 // 게시물 상세 조회 라우트
 router.get('/community/post/:postId', async (req, res) => {
     try {

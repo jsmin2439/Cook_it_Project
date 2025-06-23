@@ -951,4 +951,86 @@ router.put('/community/post/:postId', authMiddleware, async (req, res) => {
     }
 });
 
+// 사용자가 좋아요한 게시물 목록 조회 라우트
+router.get('/community/liked-posts', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.uid;
+        const { page = 1, limit = 10 } = req.query;
+        const pageNumber = parseInt(page);
+        const limitNumber = parseInt(limit);
+
+        if (isNaN(pageNumber) || isNaN(limitNumber) || pageNumber < 1 || limitNumber < 1) {
+            return res.status(400).json({
+                success: false,
+                error: '유효하지 않은 페이지 파라미터입니다.'
+            });
+        }
+
+        const db = admin.firestore();
+        // likedBy 배열에 사용자 ID가 포함된 게시물 쿼리
+        const postsQuery = db.collection('community')
+            .where('likedBy', 'array-contains', userId)
+            .orderBy('createdAt', 'desc');
+
+        const postsSnapshot = await postsQuery.get();
+
+        // 좋아요한 게시물이 없는 경우 처리
+        if (postsSnapshot.empty) {
+            return res.json({
+                success: true,
+                message: '좋아요한 게시물이 없습니다.',
+                posts: [],
+                pagination: {
+                    page: pageNumber,
+                    limit: limitNumber,
+                    total: 0,
+                    totalPages: 0
+                }
+            });
+        }
+
+        const likedPosts = [];
+        postsSnapshot.forEach(doc => {
+            const postData = doc.data();
+            likedPosts.push({
+                id: doc.id,
+                title: postData.title,
+                content: postData.content,
+                imageUrl: postData.recipe?.ATT_FILE_NO_MAIN || postData.imageUrl,
+                createdAt: postData.createdAt,
+                likeCount: (postData.likedBy || []).length,
+                commentCount: (postData.comments || []).length,
+                tags: postData.tags || [],
+                avgRating: postData.avgRating || 0,
+                ratingCount: postData.ratingCount || 0,
+                userName: postData.userName || '익명'
+            });
+        });
+
+        // 페이지네이션 적용
+        const totalCount = likedPosts.length;
+        const start = (pageNumber - 1) * limitNumber;
+        const end = start + limitNumber;
+        const paginatedPosts = likedPosts.slice(start, end);
+
+        res.json({
+            success: true,
+            posts: paginatedPosts,
+            pagination: {
+                page: pageNumber,
+                limit: limitNumber,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limitNumber)
+            }
+        });
+
+    } catch (error) {
+        console.error('좋아요한 게시물 조회 오류:', error);
+        res.status(500).json({
+            success: false,
+            error: '게시물 목록 조회 중 오류가 발생했습니다.'
+        });
+    }
+});
+
 module.exports = router;

@@ -1,4 +1,4 @@
-// lib/screens/edit_recipe_book_screen.dart
+// lib/ai_recipe/edit_recipe_book_screen.dart
 //
 //  EditRecipeBook  – pastel redesign 2025
 //  * 밝은 배경·카드 컬러

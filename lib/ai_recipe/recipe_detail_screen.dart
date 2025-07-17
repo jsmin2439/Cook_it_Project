@@ -1,3 +1,4 @@
+//lib_ai_recipe/recipe_detail_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -45,7 +46,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (recipeId.isEmpty) return; // ID가 없으면 중단
 
     final url = Uri.parse(
-        'http://gamproject.iptime.org:3000/api/saved-recipes/$recipeId');
+        'http://gamdasal.iptime.org:3000/api/saved-recipes/$recipeId');
     try {
       final response = await http.get(
         url,
@@ -73,7 +74,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     final recipeId = widget.recipeData["id"]?.toString() ?? "";
     if (recipeId.isEmpty) return;
 
-    final url = Uri.parse('http://gamproject.iptime.org:3000/api/save-recipe');
+    final url = Uri.parse('http://gamdasal.iptime.org:3000/api/save-recipe');
     try {
       final response = await http.post(
         url,
@@ -107,7 +108,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
     if (recipeId.isEmpty) return;
 
     final url = Uri.parse(
-        'http://gamproject.iptime.org:3000/api/saved-recipes/$recipeId');
+        'http://gamdasal.iptime.org:3000/api/saved-recipes/$recipeId');
     try {
       final response = await http.delete(
         url,

@@ -1,3 +1,4 @@
+//lib/cook_it_splash_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mediapipe_2/login/login_screen.dart';

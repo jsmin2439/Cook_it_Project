@@ -1,3 +1,4 @@
+//lib/my_fridge/add_ingredient_camera_screen.dart
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -115,7 +116,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<List<String>?> _uploadToServer(String filePath) async {
     try {
       final uri =
-          Uri.parse("http://gamproject.iptime.org:3000/api/upload-ingredient");
+          Uri.parse("http://gamdasal.iptime.org:3000/api/upload-ingredient");
       final imageFile = File(filePath);
       final imageBytes = await imageFile.readAsBytes();
 

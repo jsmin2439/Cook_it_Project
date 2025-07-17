@@ -1,753 +1,538 @@
+// lib/community/community_post_detail_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+
 import '../ai_recipe/recipe_detail_screen.dart';
-import '../color/colors.dart';
+import '../color/colors.dart'; // kTextColor · kPinkButtonColor
+
+const Color _chipColor = Color(0xFFF2F3F5); // community_screen 과 동일
 
 class CommunityPostDetailPage extends StatefulWidget {
-  final String postId;
-  final String userId;
-  final String idToken;
-
-  const CommunityPostDetailPage({
-    Key? key,
-    required this.postId,
-    required this.userId,
-    required this.idToken,
-  }) : super(key: key);
+  final String postId, userId, idToken;
+  const CommunityPostDetailPage(
+      {super.key,
+      required this.postId,
+      required this.userId,
+      required this.idToken});
 
   @override
   State<CommunityPostDetailPage> createState() =>
       _CommunityPostDetailPageState();
 }
 
-class _CommunityPostDetailPageState extends State<CommunityPostDetailPage>
-    with WidgetsBindingObserver {
-  Map<String, dynamic>? _postData;
-  bool _isLoading = false;
-  String? _errorMessage;
+class _CommunityPostDetailPageState extends State<CommunityPostDetailPage> {
+  Map<String, dynamic>? _post;
+  bool _loading = false;
+  String? _error;
 
-  final TextEditingController _commentController = TextEditingController();
-  final FocusNode _commentFocusNode = FocusNode();
+  bool _liked = false;
+  int _likeCnt = 0;
 
-  // 키보드 표시 여부
-  bool _isKeyboardVisible = false;
-  // 좋아요 상태
-  bool _isLiked = false;
+  final _commentCtl = TextEditingController();
+
+  // ―― 인-라인 편집용 상태
+  String? _editingCid;
+  final _editCtl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _fetchPostDetail();
+    _fetch();
   }
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _commentController.dispose();
-    _commentFocusNode.dispose();
-    super.dispose();
-  }
+  //────────────────────────────────── API
+  bool _isLiked(Map<String, dynamic> p) =>
+      p['liked'] == true ||
+      List<String>.from(p['likedBy'] ?? []).contains(widget.userId);
 
-  /// 키보드 표시 여부 체크
-  @override
-  void didChangeMetrics() {
-    final bottomInset = WidgetsBinding.instance.window.viewInsets.bottom;
+  Future<void> _fetch() async {
     setState(() {
-      _isKeyboardVisible = bottomInset > 0;
-    });
-  }
-
-  //----------------------------------------------------------------------------
-  // 1) 게시물 상세 조회
-  //----------------------------------------------------------------------------
-  Future<void> _fetchPostDetail() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _loading = true;
+      _error = null;
     });
 
-    final url = Uri.parse(
-        "http://gamproject.iptime.org:3000/api/community/post/${widget.postId}");
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data["success"] == true) {
-          setState(() {
-            _postData = data["post"];
-            // 서버에서 liked 여부를 받았다면
-            _isLiked = _postData?["liked"] == true;
-          });
-        } else {
-          _errorMessage = data["message"] ?? "상세 조회 실패";
-        }
+      final uri = Uri.parse(
+          'http://gamdasal.iptime.org:3000/api/community/post/${widget.postId}');
+      final res = await http
+          .get(uri, headers: {'Authorization': 'Bearer ${widget.idToken}'});
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        _post = data['post'];
+        _liked = _isLiked(_post!);
+        _likeCnt = _post?['likeCount'] ?? (_post?['likedBy']?.length ?? 0);
       } else {
-        _errorMessage = "서버 오류: ${response.statusCode}";
+        _error = data['message'] ?? '불러오기 실패';
       }
     } catch (e) {
-      _errorMessage = "네트워크 오류: $e";
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _error = '$e';
     }
+    if (mounted) setState(() => _loading = false);
   }
 
-  //----------------------------------------------------------------------------
-  // 2) 좋아요 토글
-  //----------------------------------------------------------------------------
   Future<void> _toggleLike() async {
-    if (_postData == null) return;
-    final postId = _postData!["id"];
+    setState(() {
+      _liked = !_liked;
+      _likeCnt += _liked ? 1 : -1;
+    });
 
-    try {
-      final url = Uri.parse(
-          "http://gamproject.iptime.org:3000/api/community/post/$postId/like");
-      final response = await http.post(
-        url,
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data["success"] == true) {
-          setState(() {
-            _isLiked = data["liked"] == true;
-          });
-        }
-      } else {
-        _showErrorSnackBar("좋아요 처리 실패(${response.statusCode})");
-      }
-    } catch (e) {
-      _showErrorSnackBar("좋아요 처리 중 오류: $e");
-    }
-  }
-
-  //----------------------------------------------------------------------------
-  // 3) 댓글 등록
-  //    - 전송 성공하면 _postData["comments"]에 직접 추가하여 실시간 반영
-  //----------------------------------------------------------------------------
-
-  //----------------------------------------------------------------------------
-  // 4) 댓글 삭제
-  //----------------------------------------------------------------------------
-  Future<void> _deleteComment(String commentId) async {
-    final postId = widget.postId;
-    final url = Uri.parse(
-        "http://gamproject.iptime.org:3000/api/community/post/$postId/comment/$commentId");
-
-    try {
-      final response = await http.delete(
-        url,
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        // 로컬 상태 반영
-        setState(() {
-          _postData?["comments"]
-              .removeWhere((item) => item["commentId"] == commentId);
-        });
-        _showSuccessSnackBar("댓글이 삭제되었습니다.");
-      } else {
-        _showErrorSnackBar("댓글 삭제 실패(${response.statusCode})");
-      }
-    } catch (e) {
-      _showErrorSnackBar("댓글 삭제 중 오류: $e");
-    }
-  }
-
-  //----------------------------------------------------------------------------
-  // 5) 댓글 수정
-  //----------------------------------------------------------------------------
-  Future<void> _editComment(String commentId, String oldContent) async {
-    final newContent = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("댓글 수정"),
-        content: TextField(
-          controller: TextEditingController(text: oldContent),
-          autofocus: true,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: "수정할 댓글 내용을 입력하세요",
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("취소"),
-          ),
-          TextButton(
-            onPressed: () {
-              final textField = (context
-                      .findAncestorWidgetOfExactType<AlertDialog>()!
-                      .content as TextField)
-                  .controller;
-              Navigator.pop(context, textField?.text ?? "");
-            },
-            child: const Text("저장", style: TextStyle(color: Colors.blue)),
-          ),
-        ],
-      ),
+    await http.post(
+      Uri.parse(
+          'http://gamdasal.iptime.org:3000/api/community/post/${widget.postId}/like'),
+      headers: {'Authorization': 'Bearer ${widget.idToken}'},
     );
+    _fetch(); // 동기화
+  }
 
-    if (newContent == null || newContent.isEmpty || newContent == oldContent) {
+  //────────────────────── 댓글 CRUD
+  Future<void> _sendComment() async {
+    final txt = _commentCtl.text.trim();
+    if (txt.isEmpty) return;
+
+    await http.post(
+      Uri.parse(
+          'http://gamdasal.iptime.org:3000/api/community/post/${widget.postId}/comment'),
+      headers: {
+        'Authorization': 'Bearer ${widget.idToken}',
+        'Content-Type': 'application/json'
+      },
+      body: jsonEncode({'content': txt}),
+    );
+    _commentCtl.clear();
+    _fetch();
+  }
+
+  Future<void> _saveEdited() async {
+    final newTxt = _editCtl.text.trim();
+    if (_editingCid == null || newTxt.isEmpty) {
+      setState(() => _editingCid = null);
       return;
     }
-
-    final postId = widget.postId;
-    final url = Uri.parse(
-        "http://gamproject.iptime.org:3000/api/community/post/$postId/comment/$commentId");
-
-    try {
-      final response = await http.put(
-        url,
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({"content": newContent}),
-      );
-
-      if (response.statusCode == 200) {
-        _showSuccessSnackBar("댓글이 수정되었습니다.");
-        await _fetchPostDetail();
-      } else {
-        _showErrorSnackBar("댓글 수정 실패(${response.statusCode})");
-      }
-    } catch (e) {
-      _showErrorSnackBar("댓글 수정 중 오류: $e");
-    }
-  }
-
-  void _showErrorSnackBar(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.redAccent,
-      ),
+    await http.put(
+      Uri.parse(
+          'http://gamdasal.iptime.org:3000/api/community/post/${widget.postId}/comment/$_editingCid'),
+      headers: {
+        'Authorization': 'Bearer ${widget.idToken}',
+        'Content-Type': 'application/json'
+      },
+      body: jsonEncode({'content': newTxt}),
     );
+    _editingCid = null;
+    _fetch();
   }
 
-  void _showSuccessSnackBar(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.greenAccent,
-      ),
+  Future<void> _deleteComment(String cid) async {
+    await http.delete(
+      Uri.parse(
+          'http://gamdasal.iptime.org:3000/api/community/post/${widget.postId}/comment/$cid'),
+      headers: {'Authorization': 'Bearer ${widget.idToken}'},
     );
+    _fetch();
   }
 
-  //----------------------------------------------------------------------------
-  // build
-  //----------------------------------------------------------------------------
+  //────────────────────────────────── UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          // 본문 콘텐츠 (스크롤 가능 영역)
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 80), // 하단 입력창 공간 확보
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 포스트 내용 + 이미지 통합 위젯
-                  _buildPostContentWithImage(),
-
-                  // 레시피 카드
-                  if (_postData?["recipe"] != null) _buildRecipeCard(),
-
-                  // 댓글 섹션
-                  _buildCommentSection(),
-                ],
-              ),
-            ),
-          ),
-
-          // 고정된 댓글 입력창
-          _buildCommentInputBar(),
-        ],
-      ),
-    );
-  }
-
-  //----------------------------------------------------------------------------
-  // AppBar
-  //----------------------------------------------------------------------------
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: kCardColor,
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(kBorderRadius),
-        ),
-      ),
-      title: Text(
-        _postData?["title"] ?? "커뮤니티 포스트",
-        style: const TextStyle(
-          color: kTextColor,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -0.5,
-        ),
-      ),
-      centerTitle: false,
-      iconTheme: const IconThemeData(color: kTextColor),
-      actions: [
-        IconButton(
-          icon: Icon(
-            _isLiked ? Icons.favorite_rounded : Icons.favorite_outline_rounded,
-            color: _isLiked ? kPinkButtonColor : kTextColor.withOpacity(0.6),
-            size: 28,
-          ),
-          onPressed: _toggleLike,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPostContentWithImage() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 작성자 정보
-          _buildAuthorSection(),
-          const SizedBox(height: 20),
-
-          // 텍스트 내용
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: kCardColor,
-              borderRadius: BorderRadius.circular(kBorderRadius),
-            ),
-            child: Text(
-              _postData?["content"] ?? "",
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: kTextColor,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 이미지
-          if (_postData?["imageUrl"] != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(kBorderRadius),
-              child: Image.network(
-                _postData!["imageUrl"],
-                width: double.infinity,
-                height: 240,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 240,
-                    color: kCardColor,
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
-                  height: 240,
-                  color: kCardColor,
-                  child: const Icon(Icons.photo_library_rounded, size: 50),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAuthorSection() {
-    return Row(
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _postData?["userName"] ?? "Unknown",
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: kTextColor,
-              ),
-            ),
-            Text(
-              _formatDate(_postData?["createdAt"]),
-              style: TextStyle(
-                fontSize: 12,
-                color: kTextColor.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // 레시피 카드
-  Widget _buildRecipeCard() {
-    final recipe = _postData!["recipe"];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: kCardColor,
-        borderRadius: BorderRadius.circular(kBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(kBorderRadius)),
-            child: Stack(
-              children: [
-                Image.network(
-                  recipe["ATT_FILE_NO_MAIN"] ?? "",
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
+      backgroundColor: Colors.white,
+      appBar: _appBar(),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : (_error != null)
+              ? Center(child: Text(_error!))
+              : _post == null
+                  ? const SizedBox.shrink()
+                  : Column(
+                      children: [
+                        Expanded(child: _body()),
+                        _inputBar(),
+                      ],
                     ),
-                    child: Text(
-                      recipe["RCP_NM"] ?? "레시피 제목",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    );
+  }
+
+  //―――― AppBar
+  AppBar _appBar() => AppBar(
+        backgroundColor: Colors.white,
+        elevation: .6,
+        iconTheme: const IconThemeData(color: kTextColor),
+        title: Text(_post?['title'] ?? '',
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, fontSize: 18, color: kTextColor)),
+        actions: [
+          Row(children: [
+            Text('$_likeCnt', style: const TextStyle(color: kTextColor)),
+            IconButton(
+              icon: Icon(
+                  _liked ? Icons.favorite : Icons.favorite_border_outlined,
+                  color: _liked ? kPinkButtonColor : kTextColor),
+              onPressed: _toggleLike,
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: kPinkButtonColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    recipe["RCP_WAY2"] ?? "종류",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RecipeDetailPage(
-                        recipeData: recipe,
-                        userId: widget.userId,
-                        idToken: widget.idToken,
-                        showEditIcon: false,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: const [
-                      Text(
-                        '레시피 보기',
-                        style: TextStyle(color: kTextColor),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios_rounded,
-                          size: 14, color: kTextColor),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ])
         ],
-      ),
-    );
-  }
-
-  // 댓글 메뉴 표시 함수 추가
-  void _showCommentMenu(dynamic comment) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit, color: kTextColor),
-              title: const Text('수정하기'),
-              onTap: () {
-                Navigator.pop(context);
-                _editComment(comment["commentId"], comment["content"]);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.redAccent),
-              title:
-                  const Text('삭제하기', style: TextStyle(color: Colors.redAccent)),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteComment(comment["commentId"]);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-// 댓글 등록 부분 수정 (맨 뒤에 추가)
-  Future<void> _submitComment() async {
-    final content = _commentController.text.trim();
-    if (content.isEmpty) return;
-
-    try {
-      final response = await http.post(
-        Uri.parse(
-            "http://gamproject.iptime.org:3000/api/community/post/${widget.postId}/comment"),
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({"content": content}),
       );
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        if (data["success"] == true && data["comment"] != null) {
-          setState(() {
-            _postData?["comments"].add(data["comment"]); // 맨 뒤에 추가
-          });
-          _commentController.clear();
-          FocusScope.of(context).unfocus();
+  //―――― BODY
+  Widget _body() => SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _author(),
+            if (_post?['imageUrl'] != null) _photo(),
+            _content(),
+            _tagWrap(),
+            if (_post?['recipe'] != null) _recipeSection(),
+            _commentList(),
+          ],
+        ),
+      );
 
-          // 댓글 목록 자동 스크롤
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            Scrollable.ensureVisible(
-              context,
-              alignment: 1.0, // 하단 정렬
-              duration: const Duration(milliseconds: 300),
-            );
-          });
-        }
-      }
-    } catch (e) {
-      _showErrorSnackBar("댓글 작성 중 오류: $e");
-    }
-  }
+  Widget _author() => ListTile(
+        leading: CircleAvatar(
+          backgroundColor: kPinkButtonColor,
+          child: Text((_post?['userName'] ?? 'U')[0]),
+        ),
+        title: Text(_post?['userName'] ?? '',
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(_dateStr(_post?['createdAt'])),
+      );
 
-// 댓글 목록 역순 출력 수정
-  Widget _buildCommentSection() {
+  Widget _photo() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(_post!['imageUrl'], fit: BoxFit.cover),
+        ),
+      );
+
+  Widget _content() => (_post?['content'] ?? '').isEmpty
+      ? const SizedBox.shrink()
+      : Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Text(_post!['content'],
+              style: const TextStyle(fontSize: 15, height: 1.55)),
+        );
+
+  Widget _tagWrap() {
+    final tags = List<String>.from(_post?['tags'] ?? []);
+    if (tags.isEmpty) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-              '댓글',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: kTextColor,
-              ),
-            ),
-          ),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _postData?["comments"]?.length ?? 0,
-            reverse: true,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final reversedIndex = _postData!["comments"].length - 1 - index;
-              return _buildCommentItem(_postData!["comments"][reversedIndex]);
-            },
-          ),
-          const SizedBox(height: 20), // 하단 여백 추가
-        ],
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: tags.map((t) {
+          final tag = t.startsWith('#') ? t : '#$t';
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+                color: _chipColor, borderRadius: BorderRadius.circular(20)),
+            child: Text(tag,
+                style: const TextStyle(fontSize: 12, color: kTextColor)),
+          );
+        }).toList(),
       ),
     );
   }
 
-  Widget _buildCommentItem(dynamic comment) {
-    final isCurrentUser = comment["userId"] == widget.userId;
+  //―――― 레시피 카드 영역
+  Widget _recipeSection() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Divider(height: 32),
+            const Text('레시피북',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: kTextColor)),
+            const SizedBox(height: 12),
+            _recipeCard(),
+          ],
+        ),
+      );
+
+  Widget _recipeCard() {
+    final r = _post!['recipe'];
+    final img = r['ATT_FILE_NO_MAIN'] ?? '';
+    final name = r['RCP_NM'] ?? '';
+    final way = r['RCP_WAY2'] ?? '';
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecipeDetailPage(
+              recipeData: r,
+              userId: widget.userId,
+              idToken: widget.idToken,
+              showEditIcon: false),
+        ),
+      ),
+      child: Container(
+        height: 240,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(.08),
+                blurRadius: 8,
+                offset: const Offset(0, 4))
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // img
+            Expanded(
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Stack(
+                  children: [
+                    Image.network(img,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.menu_book,
+                                size: 48, color: Colors.grey))),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            Colors.black.withOpacity(.55),
+                            Colors.transparent
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                  height: 1.2)),
+                          const SizedBox(height: 4),
+                          Text(way,
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(.9),
+                                  fontSize: 12)),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+            // bottom bar
+            Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.vertical(bottom: Radius.circular(12)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.local_dining, size: 16, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(way,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  const Spacer(),
+                  const Icon(Icons.star_rate_rounded,
+                      size: 16, color: Colors.amber),
+                  const SizedBox(width: 4),
+                  Text('${r['rating'] ?? 4.5}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  //―――― 댓글 LIST
+  Widget _commentList() {
+    final list = List<Map<String, dynamic>>.from(_post?['comments'] ?? []);
+    if (list.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 60),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        reverse: true,
+        itemCount: list.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
+        itemBuilder: (_, i) => _commentCard(list[list.length - 1 - i]),
+      ),
+    );
+  }
+
+  Widget _commentCard(Map<String, dynamic> c) {
+    final mine = c['userId'] == widget.userId;
+    final editing = _editingCid == c['commentId'];
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: kCardColor,
-        borderRadius: BorderRadius.circular(kBorderRadius),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(.06),
+              blurRadius: 6,
+              offset: const Offset(0, 3))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1) header ─ name + date + menu
           Row(
             children: [
               CircleAvatar(
-                radius: 14,
-                backgroundColor: kPinkButtonColor,
-                child: Text(
-                  comment["userName"].toString().substring(0, 1),
-                  style: const TextStyle(color: Colors.white),
-                ),
+                  radius: 14,
+                  backgroundColor: kPinkButtonColor,
+                  child: Text(c['userName'][0],
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 12))),
+              const SizedBox(width: 10),
+              // 이름이 길어도 overflow 안나게 Expanded
+              Expanded(
+                child: Text(c['userName'],
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
-              const SizedBox(width: 8),
-              Text(
-                comment["userName"],
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: kTextColor,
+              Text(_dateStr(c['createdAt']),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              if (mine)
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.more_vert, size: 18),
+                  onSelected: (v) {
+                    if (v == 'edit') {
+                      setState(() {
+                        _editingCid = c['commentId'];
+                        _editCtl.text = c['content'];
+                      });
+                    }
+                    if (v == 'del') _deleteComment(c['commentId']);
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('수정')),
+                    PopupMenuItem(value: 'del', child: Text('삭제')),
+                  ],
                 ),
-              ),
-              if (isCurrentUser) ...[
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.more_vert_rounded, size: 20),
-                  onPressed: () => _showCommentMenu(comment),
-                ),
-              ],
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            comment["content"],
-            style: const TextStyle(
-              fontSize: 14,
-              color: kTextColor,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _formatDate(comment["createdAt"]),
-            style: TextStyle(
-              fontSize: 11,
-              color: kTextColor.withOpacity(0.5),
-            ),
-          ),
+          const SizedBox(height: 10),
+
+          // 2) 내용 or 편집 UI
+          editing
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _editCtl,
+                        minLines: 1,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: _chipColor,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: _saveEdited,
+                      style: TextButton.styleFrom(
+                          foregroundColor: kPinkButtonColor),
+                      child: const Text('완료'),
+                    )
+                  ],
+                )
+              : Text(c['content']),
         ],
       ),
     );
   }
 
-  Widget _buildCommentInputBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _commentController,
-                decoration: InputDecoration(
-                  hintText: "댓글을 입력하세요...",
-                  filled: true,
-                  fillColor: kCardColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: kPinkButtonColor,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.send_rounded, color: Colors.white),
-                onPressed: _submitComment,
-              ),
-            ),
+  //―――― 입력 바
+  Widget _inputBar() => Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black26, blurRadius: 4, offset: Offset(0, -1))
           ],
         ),
-      ),
-    );
-  }
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentCtl,
+                  decoration: InputDecoration(
+                    hintText: '댓글을 입력하세요',
+                    filled: true,
+                    fillColor: _chipColor,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              CircleAvatar(
+                backgroundColor: kPinkButtonColor,
+                child: IconButton(
+                  icon: const Icon(Icons.send, size: 18, color: Colors.white),
+                  onPressed: _sendComment,
+                ),
+              )
+            ],
+          ),
+        ),
+      );
 
-  String _formatDate(dynamic timestamp) {
-    if (timestamp == null) return "";
+  // util
+  String _dateStr(dynamic ts) {
     try {
-      final seconds = timestamp["_seconds"] as int;
-      final date = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
-      return DateFormat("yyyy.MM.dd HH:mm").format(date);
-    } catch (e) {
-      return "";
+      final sec = (ts?['_seconds'] ?? 0) as int;
+      return DateFormat('yy.MM.dd HH:mm')
+          .format(DateTime.fromMillisecondsSinceEpoch(sec * 1000));
+    } catch (_) {
+      return '';
     }
   }
 }

@@ -1,3 +1,4 @@
+//lib/allergy_hate_intro_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'allergy_hate_category_screen.dart';

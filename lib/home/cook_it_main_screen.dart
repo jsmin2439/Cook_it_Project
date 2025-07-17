@@ -1,3 +1,4 @@
+//lib/home/cook_it_main_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,7 @@ import '../ai_recipe/recipe_detail_screen.dart';
 import '../model/fmbt_result.dart';
 import '../fmbt/fmbt_result_screen.dart';
 import '../community/community_screen.dart';
+import '../setting/setting_screen.dart';
 
 // 테마/컬러 설정
 const Color kBackgroundColor = Color(0xFFFFFFFF); // 전체 배경: 흰색
@@ -65,6 +67,12 @@ class _MainScreenState extends State<MainScreen> {
   );
 
   late final _communityScreen = CommunityScreen(
+    userId: widget.userId,
+    idToken: widget.idToken,
+  );
+
+  late final _settingScreen = SettingScreen(
+    userEmail: widget.userEmail,
     userId: widget.userId,
     idToken: widget.idToken,
   );
@@ -136,10 +144,10 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final screens = [
       _buildHomeTab(),
-      _buildCategoryTab(),
       _searchScreen,
-      _heartScreen,
       _communityScreen,
+      _heartScreen,
+      _settingScreen,
     ];
 
     return Scaffold(
@@ -163,12 +171,12 @@ class _MainScreenState extends State<MainScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: '카테고리'),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: '검색'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.bookmark_border), label: '저장'),
-          BottomNavigationBarItem(
               icon: Icon(Icons.people_alt_outlined), label: '커뮤니티'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.bookmark_border), label: '저장'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: '설정'),
         ],
       ),
     );
@@ -192,20 +200,6 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  /// Category 탭(1번)의 임시 화면
-  Widget _buildCategoryTab() {
-    return const Center(
-      child: Text("Category Screen (아직 구현 전)"),
-    );
-  }
-
-  /// 커뮤니티 탭(4번)의 임시 화면
-  Widget _buildCommTab() {
-    return const Center(
-      child: Text("Community Screen (아직 구현 전)"),
     );
   }
 
@@ -427,7 +421,7 @@ class _MainScreenState extends State<MainScreen> {
 
     try {
       final uri =
-          Uri.parse("http://gamproject.iptime.org:3000/api/recommend-recipes");
+          Uri.parse("http://gamdasal.iptime.org:3000/api/recommend-recipes");
       final response = await http.post(
         uri,
         headers: {
@@ -913,7 +907,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _viewSurveyResults() async {
     try {
       final uri = Uri.parse(
-        'http://jsmin2439.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}',
+        'http://gamdasal.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}',
       );
 
       final response = await http.get(

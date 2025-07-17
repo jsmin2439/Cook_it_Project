@@ -1,348 +1,332 @@
+// lib/community/community_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:intl/intl.dart'; // ← 추가
 
-// 글 상세 페이지 (예: PostDetailPage)
-import 'community_post_detail_screen.dart';
-
-// 글 작성 페이지
+import '../color/colors.dart';
 import 'community_post_create_screen.dart';
+import 'community_post_detail_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   final String userId;
   final String idToken;
-
-  const CommunityScreen({
-    Key? key,
-    required this.userId,
-    required this.idToken,
-  }) : super(key: key);
+  const CommunityScreen({Key? key, required this.userId, required this.idToken})
+      : super(key: key);
 
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();
 }
 
+enum SortOption { latest, relevance }
+
 class _CommunityScreenState extends State<CommunityScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  final _searchCtl = TextEditingController();
+  final _scrollCtl = ScrollController();
 
-  // 실제 서버에서 가져온 게시물 목록
   List<Map<String, dynamic>> _posts = [];
-
-  // 페이지, 페이지당 limit
-  int _currentPage = 1;
-  int _limit = 10;
-
-  // 간단한 로딩/에러 표시
   bool _isLoading = false;
-  String? _errorMessage;
+  String? _errorMsg;
+
+  int _page = 1;
+  static const _limit = 10;
+  bool _hasMore = true;
+
+  SortOption _sort = SortOption.latest;
+  String _tagFilter = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchPosts(); // 화면 초기 로딩 시 목록 가져오기
+    _fetchPosts(reset: true);
+
+    _scrollCtl.addListener(() {
+      if (_scrollCtl.position.pixels >=
+              _scrollCtl.position.maxScrollExtent - 300 &&
+          !_isLoading &&
+          _hasMore) {
+        _page++;
+        _fetchPosts();
+      }
+    });
   }
 
-  //------------------------------------------------------------------------------
-  // (A) 서버에 GET 요청 -> 게시물 목록 가져오기
-  //------------------------------------------------------------------------------
-  Future<void> _fetchPosts() async {
+  @override
+  void dispose() {
+    _scrollCtl.dispose();
+    _searchCtl.dispose();
+    super.dispose();
+  }
+
+  //──────────────────────────────── API
+  Future<void> _fetchPosts({bool reset = false}) async {
+    if (reset) {
+      _page = 1;
+      _hasMore = true;
+      _posts.clear();
+    }
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      if (reset) _errorMsg = null;
     });
 
-    final url = Uri.parse(
-      "http://gamproject.iptime.org:3000/api/community/posts"
-      "?page=$_currentPage&limit=$_limit",
-    );
+    final params = <String, String>{
+      'page': '$_page',
+      'limit': '$_limit',
+      if (_searchCtl.text.trim().isNotEmpty) 'search': _searchCtl.text.trim(),
+      if (_tagFilter.isNotEmpty) 'tag': _tagFilter,
+      if (_sort == SortOption.relevance) 'sort': 'relevance',
+    };
+    final uri =
+        Uri.http('gamdasal.iptime.org:3000', '/api/community/posts', params);
 
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Authorization": "Bearer ${widget.idToken}",
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (data["success"] == true) {
-          final List<dynamic> postsJson = data["posts"] ?? [];
-          _posts = postsJson
-              .map((item) {
-                // item 예: {"id":"...","title":"...","content":"...",...}
-                final map = item as Map<String, dynamic>;
-
-                return {
-                  "id": map["id"] ?? "",
-                  "title": map["title"] ?? "No Title",
-                  "content": map["content"] ?? "",
-                  "imageUrl": map["imageUrl"] ?? "",
-                  "author": map["userName"] ?? "Unknown",
-                  "recipeName": map["recipeName"] ?? "",
-                  "likes": map["likeCount"] ?? 0,
-                  "comments": map["commentCount"] ?? 0,
-                  "createdAt": map["createdAt"] ?? "",
-                };
-              })
-              .toList()
-              .cast<Map<String, dynamic>>();
-          // pagination 등도 data["pagination"]에서 파싱 가능
-        } else {
-          _errorMessage = data["message"] ?? "목록 조회 실패";
-        }
+      final res = await http
+          .get(uri, headers: {'Authorization': 'Bearer ${widget.idToken}'});
+      final j = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && j['success'] == true) {
+        final list = (j['posts'] ?? []).cast<Map<String, dynamic>>();
+        setState(() {
+          _posts.addAll(list);
+          _hasMore = list.length == _limit;
+        });
       } else {
-        _errorMessage = "서버 오류: ${response.statusCode}";
+        setState(() => _errorMsg = j['message'] ?? '불러오기 실패');
       }
     } catch (e) {
-      _errorMessage = "네트워크/통신 오류: $e";
+      setState(() => _errorMsg = '$e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
-  //------------------------------------------------------------------------------
-  // (B) 검색
-  //------------------------------------------------------------------------------
-  void _performSearch() {
-    final query = _searchController.text.trim();
-    // TODO: 실제 검색 로직 (파라미터 query를 서버로 보내거나)
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("검색어: $query (아직 미구현)")),
-    );
-  }
-
-  //------------------------------------------------------------------------------
-  // (C) 글 작성 화면 이동
-  //------------------------------------------------------------------------------
-  void _goToCreatePost() async {
-    final result = await Navigator.push(
+  //──────────────────────────────── Nav
+  Future<void> _openCreatePage() async {
+    final ok = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => CommunityPostCreateScreen(
-          userId: widget.userId,
-          idToken: widget.idToken,
-        ),
-      ),
+          builder: (_) => CommunityPostCreateScreen(
+              userId: widget.userId, idToken: widget.idToken)),
     );
-
-    if (result == true) {
-      // 작성 후 돌아왔다면 → 다시 목록 요청
-      await _fetchPosts();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("게시물이 성공적으로 작성되었습니다.")),
-      );
-    }
+    if (ok == true) _fetchPosts(reset: true);
   }
 
-  //------------------------------------------------------------------------------
-  // 빌드
-  //------------------------------------------------------------------------------
+  Future<void> _openDetailPage(String id) async {
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+          builder: (_) => CommunityPostDetailPage(
+              postId: id, userId: widget.userId, idToken: widget.idToken)),
+    );
+    if (ok == true) _fetchPosts(reset: true);
+  }
+
+  //──────────────────────────────── UI
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 상단바
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.black87),
-            onPressed: _showSearchDialog,
-          ),
-        ],
-      ),
-
-      // 본문: 에러 / 로딩 / 목록
+      backgroundColor: kBackgroundColor,
+      appBar: _appBar(),
       body: RefreshIndicator(
-        onRefresh: () async {
-          _currentPage = 1; // 페이지를 초기화
-          await _fetchPosts(); // 게시물 재조회
-        },
-        child: _buildBody(),
+        onRefresh: () => _fetchPosts(reset: true),
+        child: _body(),
       ),
-
-      // 글 작성 버튼
       floatingActionButton: FloatingActionButton(
-        onPressed: _goToCreatePost,
-        backgroundColor: Colors.orange,
+        backgroundColor: kPinkButtonColor,
+        onPressed: _openCreatePage,
         child: const Icon(Icons.edit),
       ),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
+  PreferredSizeWidget _appBar() => AppBar(
+        backgroundColor: Colors.white,
+        elevation: .5,
+        titleSpacing: 0,
+        title: _searchBar(),
+        actions: [_sortSelector()],
+      );
+
+  Widget _searchBar() => Container(
+        margin: const EdgeInsets.only(right: 8),
+        height: 40,
+        child: TextField(
+          controller: _searchCtl,
+          textInputAction: TextInputAction.search,
+          onSubmitted: (_) => _fetchPosts(reset: true),
+          decoration: InputDecoration(
+            hintText: '게시물을 검색하세요',
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: _searchCtl.text.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () {
+                      _searchCtl.clear();
+                      _fetchPosts(reset: true);
+                    },
+                  ),
+            filled: true,
+            fillColor: const Color(0xFFF2F3F5),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(24),
+                borderSide: BorderSide.none),
+          ),
+        ),
+      );
+
+  Widget _sortSelector() => DropdownButtonHideUnderline(
+        child: DropdownButton(
+          value: _sort,
+          style: const TextStyle(color: kTextColor),
+          items: const [
+            DropdownMenuItem(value: SortOption.latest, child: Text('최신순')),
+            DropdownMenuItem(value: SortOption.relevance, child: Text('관련도순')),
+          ],
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _sort = v);
+            _fetchPosts(reset: true);
+          },
+        ),
+      );
+
+  //──────────────────────────────── 본문
+  Widget _body() {
+    if (_isLoading && _posts.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_errorMessage != null) {
-      return Center(child: Text("오류: $_errorMessage"));
-    }
-    if (_posts.isEmpty) {
-      return const Center(child: Text("아직 게시물이 없습니다."));
-    }
+    if (_errorMsg != null) return Center(child: Text('오류: $_errorMsg'));
+    if (_posts.isEmpty) return const Center(child: Text('게시물이 없습니다.'));
 
-    // 목록 표시
-    return ListView.separated(
+    return ListView.builder(
+      controller: _scrollCtl,
       padding: const EdgeInsets.all(8),
-      itemCount: _posts.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final post = _posts[index];
-        return _buildListItem(post);
+      itemCount: _posts.length + (_hasMore ? 1 : 0),
+      itemBuilder: (_, i) {
+        if (i == _posts.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return _postCard(_posts[i]);
       },
     );
   }
 
-  //------------------------------------------------------------------------------
-  // (D) 단일 게시물 아이템
-  //------------------------------------------------------------------------------
-  Widget _buildListItem(Map<String, dynamic> post) {
-    final imageUrl = post["imageUrl"] ?? "";
-    final title = post["title"] ?? "No Title";
-    final author = post["author"] ?? "Unknown";
-    final likes = post["likes"] ?? 0;
-    final comments = post["comments"] ?? 0;
-    final postId = post["id"] ?? "";
+  //──────────────────────────────── 카드
+  Widget _postCard(Map<String, dynamic> p) {
+    final img = p['imageUrl'] ?? '';
+    final title = p['title'] ?? '제목 없음';
+    final likes = p['likeCount'] ?? 0;
+    final cmts = p['commentCount'] ?? 0;
+    final tags = List<String>.from(p['tags'] ?? []);
+    final author = p['userName'] ?? 'Unknown';
+    final date = _fmt(p['createdAt']);
 
-    return GestureDetector(
-      onTap: () {
-        // ★ 수정: 게시물을 누르면 PostDetailPage로 이동
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => CommunityPostDetailPage(
-              postId: postId, // 목록에서 가져온 게시물 ID
-              userId: widget.userId,
-              idToken: widget.idToken,
-            ),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+            BoxShadow(color: Colors.black.withOpacity(.05), blurRadius: 4)
+          ]),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _openDetailPage(p['id']),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // (1) 왼쪽 썸네일
+            // 썸네일
             ClipRRect(
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-              child: imageUrl.isEmpty
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12)),
+              child: img.isEmpty
                   ? Container(
                       width: 100,
                       height: 100,
-                      color: Colors.grey[200],
+                      color: Colors.grey.shade200,
                       alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.photo,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
+                      child: const Icon(Icons.photo, color: Colors.grey),
                     )
-                  : Image.network(
-                      imageUrl,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
+                  : Image.network(img,
+                      width: 100, height: 100, fit: BoxFit.cover),
             ),
-            // (2) 오른쪽 텍스트
+            // 정보
             Expanded(
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 제목
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    Text(title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    // 작성자
-                    Text(
-                      "by $author",
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    // 작성자 · 날짜
+                    Text('$author · $date',
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 6),
-                    // 좋아요, 댓글
+                    // 좋아요 · 댓글
                     Row(
                       children: [
-                        // 좋아요
-                        const Icon(
-                          Icons.favorite_border,
-                          size: 14,
-                          color: Colors.redAccent,
-                        ),
+                        const Icon(Icons.favorite_border,
+                            size: 14, color: Colors.red),
                         const SizedBox(width: 2),
-                        Text("$likes", style: const TextStyle(fontSize: 12)),
-                        const SizedBox(width: 10),
-                        // 댓글
-                        const Icon(
-                          Icons.chat_bubble_outline,
-                          size: 14,
-                          color: Colors.blueGrey,
-                        ),
+                        Text('$likes', style: const TextStyle(fontSize: 12)),
+                        const SizedBox(width: 12),
+                        const Icon(Icons.chat_bubble_outline,
+                            size: 14, color: Colors.blueGrey),
                         const SizedBox(width: 2),
-                        Text("$comments", style: const TextStyle(fontSize: 12)),
+                        Text('$cmts', style: const TextStyle(fontSize: 12)),
                       ],
-                    )
+                    ),
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: -4,
+                        children: tags.take(3).map((t) {
+                          final tagText = t.startsWith('#') ? t : '#$t';
+                          return Chip(
+                            label: Text(tagText,
+                                style: const TextStyle(
+                                    fontSize: 11, color: kTextColor)),
+                            backgroundColor: kPinkButtonColor.withOpacity(.25),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),
     );
   }
 
-  //------------------------------------------------------------------------------
-  // (E) 검색 다이얼로그
-  //------------------------------------------------------------------------------
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text("검색"),
-          content: TextField(
-            controller: _searchController,
-            decoration: const InputDecoration(hintText: "검색어를 입력"),
-            onSubmitted: (_) => _performSearch(),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _performSearch();
-              },
-              child: const Text("확인"),
-            ),
-          ],
-        );
-      },
-    );
+  // util ─ Firestore timestamp → yyyy.MM.dd
+  String _fmt(dynamic ts) {
+    try {
+      final s = ts['_seconds'] as int;
+      return DateFormat('yyyy.MM.dd')
+          .format(DateTime.fromMillisecondsSinceEpoch(s * 1000));
+    } catch (_) {
+      return '';
+    }
   }
 }

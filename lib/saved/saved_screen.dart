@@ -1,3 +1,4 @@
+//lib/saved/saved_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -313,7 +314,7 @@ class HeartScreenState extends State<HeartScreen> {
   //--------------------------------------------------------------------------
   Future<void> _deleteRecipeFromServer(int index) async {
     final url =
-        Uri.parse('http://gamproject.iptime.org:3000/api/saved-recipe/$index');
+        Uri.parse('http://gamdasal.iptime.org:3000/api/saved-recipe/$index');
     try {
       final response = await http.delete(
         url,

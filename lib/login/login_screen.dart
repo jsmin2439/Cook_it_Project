@@ -1,3 +1,4 @@
+//lib/login/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _verifyLoginWithServer(String idToken) async {
     try {
       final response = await http.post(
-        Uri.parse("http://gamproject.iptime.org:3000/api/verify-login"),
+        Uri.parse("http://gamdasal.iptime.org:3000/api/verify-login"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $idToken" // Bearer 토큰 추가

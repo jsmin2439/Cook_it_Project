@@ -1,3 +1,4 @@
+//lib/search/search_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -55,7 +56,7 @@ class _SearchScreenState extends State<SearchScreen>
       _recipes = [];
     });
 
-    final url = Uri.parse("http://gamproject.iptime.org:3000/api/smart-search");
+    final url = Uri.parse("http://gamdasal.iptime.org:3000/api/smart-search");
     try {
       final response = await http.post(
         url,

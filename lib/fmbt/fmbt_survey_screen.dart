@@ -1,3 +1,4 @@
+//lib/fmbt/fmbt_survey_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
@@ -128,7 +129,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
   Future<void> _requestFmbtResult() async {
     try {
       final uri = Uri.parse(
-          'http://gamproject.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}');
+          'http://gamdasal.iptime.org:3000/api/calculate-fmbt?userId=${widget.userId}');
       final response = await http.get(uri, headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.idToken}',

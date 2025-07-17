@@ -388,4 +388,3 @@ extension MediaLibraryViewController: HandLandmarkerServiceVideoDelegate {
     progressView.observedProgress = Progress(totalUnitCount: Int64(totalframeCount))
   }
 }
-

@@ -48,14 +48,15 @@ app.get("/", (req, res) => {
     res.status(200).send("Server is running");
 });
 
-// 에러 처리 미들웨어 (라우터 설정 후에 추가)
-app.use((err, req, res) => {
+// 에러 처리 미들웨어 (반드시 next 포함)
+app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({
         error: "서버 오류가 발생했습니다.",
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
 });
+
 
 // 서버 초기화 및 시작
 async function startServer() {

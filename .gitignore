@@ -154,3 +154,5 @@ cook_it_server/vision-key.json
 **/*secret*.json
 
 .venv/
+
+.DS_Store

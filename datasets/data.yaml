@@ -1,0 +1,13 @@
+train: datasets/images/train
+val: datasets/images/valid
+test: datasets/images/test
+
+nc: 85
+names: ['Kochujang', 'apple', 'avocado', 'bacon', 'banana', 'beef', 'bread', 'burdock', 'butter', 'cabbage', 'canned_corn', 'canned_tuna', 'carrot', 'cheese', 'chicken', 'chili_powder', 'chocolate_bread', 'cinnamon', 'cooking_oil', 'corn', 'cornflake', 'crab_meat', 'cucumber', 'curry_powder', 'dumpling', 'egg', 'fish_cake', 'french_fries', 'garlic', 'ginger', 'green_onion', 'ham', 'hash_brown', 'hotdog', 'ice', 'ketchup', 'kimchi', 'lemon', 'lemon_juice', 'mandarin', 'marshmallow', 'mayonnaise', 'milk', 'mozzarella cheese', 'mushroom', 'mustard', 'nacho_chips', 'noodle', 'nutella', 'olive_oil', 'onion', 'oreo', 'parmasan_cheese', 'parsley', 'pasta', 'peanut_butter', 'pear', 'pepper', 'pepper_powder', 'pickle', 'pickled_radish', 'pimento', 'pineapple', 'pork', 'potato', 'ramen', 'red_wine', 'rice', 'salt', 'sausage', 'seaweed', 'seseme', 'seseme_oil', 'shrimp_paste', 'soy_sauce', 'spam', 'squid', 'strawberry', 'sugar', 'sweet_potato', 'tofu', 'tomato', 'wasabi', 'watermelon', 'whipping_cream']
+
+roboflow:
+  workspace: ha-jong-myeong
+  project: mofu
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/ha-jong-myeong/mofu/dataset/3
